@@ -8,24 +8,35 @@
 
 
 int main ( void );
+
 void assemble ( double adiag[], double aleft[], double arite[], double f[], 
   double h[], int indx[], int nl, int node[], int nu, int nquad, int nsub, 
   double ul, double ur, double xn[], double xquad[] );
+
 double ff ( double x );
+
 void geometry ( double h[], int ibc, int indx[], int nl, int node[], int nsub, 
   int *nu, double xl, double xn[], double xquad[], double xr );
+
 void init ( int *ibc, int *nquad, double *ul, double *ur, double *xl, 
   double *xr );
+
 void output ( double f[], int ibc, int indx[], int nsub, int nu, double ul, 
   double ur, double xn[] );
+
 void phi ( int il, double x, double *phii, double *phiix, double xleft, 
   double xrite );
+
 double pp ( double x );
+
 void prsys ( double adiag[], double aleft[], double arite[], double f[], 
   int nu );
+
 double qq ( double x );
+
 void solve ( double adiag[], double aleft[], double arite[], double f[], 
   int nu );
+
 void timestamp ( void );
 
 /******************************************************************************/
@@ -178,13 +189,12 @@ int main ( void )
     differential equation is being solved.
 */
 {
-    struct timeval start, end;
-    gettimeofday(&start, NULL);
+
     
     
     /*Start work here*/
-    # define NSUB 80000
-    # define NL 20 
+    # define NSUB 10000
+    # define NL 20
 
     //double adiag[NSUB+1]; 
     double *adiag;
@@ -209,7 +219,7 @@ int main ( void )
     indx=(int *)malloc(sizeof(int)*(NSUB+1)); 
     //int node[NL*NSUB];
     int *node;
-    node=(int *)malloc(sizeof(int)*(NSUB+1)); 
+    node=(int *)malloc(sizeof(int)*(NL*NSUB+1));
 
     int nquad;
     int nu;
@@ -247,27 +257,45 @@ int main ( void )
     fprintf ( fp , "  Number of basis functions per element is NL = %d\n", NL );
   /*
     Initialize the data.
+      - Init has no potential no further increase performance.
+      - There are no points where work distribution would benefit the run-time of the application.
   */
+
     init ( &ibc, &nquad, &ul, &ur, &xl, &xr );
+
   /*
     Compute the geometric quantities.
+      - Has potential to have its contents sped up
+      - Has six for loops
   */
+  struct timeval start, end;
+  gettimeofday(&start, NULL);
     geometry ( h, ibc, indx, NL, node, NSUB, &nu, xl, xn, xquad, xr );
+  gettimeofday(&end, NULL);
+  double delta = ((end.tv_sec  - start.tv_sec) * 1000000u +
+                  end.tv_usec - start.tv_usec) / 1.e6;
+
+  printf("%12.10f\n",delta);
   /*
     Assemble the linear system.
+      - Huge potential to speed it up
+      - 4 solo for loops and a set of nested for loops
   */
     assemble ( adiag, aleft, arite, f, h, indx, NL, node, nu, nquad, 
       NSUB, ul, ur, xn, xquad );
   /*
     Print out the linear system.
+      - Only one for loop...
   */
     prsys ( adiag, aleft, arite, f, nu );
   /*
     Solve the linear system.
+      - Three for loops
   */
     solve ( adiag, aleft, arite, f, nu );
   /*
     Print out the solution.
+      - One for loop
   */
     output ( f, ibc, indx, NSUB, nu, ul, ur, xn );
   /*
@@ -281,12 +309,8 @@ int main ( void )
     timestamp ( );
     fclose(fp);
     /*End work here*/
-    gettimeofday(&end, NULL);
-    double delta = ((end.tv_sec  - start.tv_sec) * 1000000u +
-             end.tv_usec - start.tv_usec) / 1.e6;
 
-    printf("time=%12.10f\n",delta);
-    
+
     return 0;
   # undef NL
   # undef NSUB
@@ -696,6 +720,8 @@ void geometry ( double h[], int ibc, int indx[], int nl, int node[], int nsub,
    
    */
   fprintf ( fp , "\n" );
+
+
   for ( i = 0; i <= nsub; i++ )
   {
     xn[i]  =  ( ( double ) ( nsub - i ) * xl 
@@ -703,6 +729,8 @@ void geometry ( double h[], int ibc, int indx[], int nl, int node[], int nsub,
               / ( double ) ( nsub );
     fprintf ( fp , "  %8d  %14f \n", i, xn[i] );
   }
+
+
 /*
   Set the lengths of each subinterval.
 */
