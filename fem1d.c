@@ -706,102 +706,104 @@ void geometry ( double h[], int ibc, int indx[], int nl, int node[], int nsub,
    
    */
   fprintf ( fp , "\n" );
-
-
-  for ( i = 0; i <= nsub; i++ )
+  omp_set_num_threads(3);
+#pragma omp parallel sections private(i)
   {
-    xn[i]  =  ( ( double ) ( nsub - i ) * xl
-              + ( double )          i   * xr )
-              / ( double ) ( nsub );
-    fprintf ( fp , "  %8d  %14f \n", i, xn[i] );
-  }
+#pragma omp section
+    {
+      for (i = 0; i <= nsub; i++) {
+        xn[i] = ((double) (nsub - i) * xl
+                 + (double) i * xr)
+                / (double) (nsub);
+        fprintf(fp, "  %8d  %14f \n", i, xn[i]);
+      }
 
 
 /*
   Set the lengths of each subinterval.
 */
-  fprintf ( fp , "\n" );
-  fprintf ( fp , "Subint    Length\n" );
-  fprintf ( fp , "\n" );
-  for ( i = 0; i < nsub; i++ )
-  {
-    h[i] = xn[i+1] - xn[i];
-    fprintf ( fp , "  %8d  %14f\n", i+1, h[i] );
-  }
+      fprintf(fp, "\n");
+      fprintf(fp, "Subint    Length\n");
+      fprintf(fp, "\n");
+      for (i = 0; i < nsub; i++) {
+        h[i] = xn[i + 1] - xn[i];
+        fprintf(fp, "  %8d  %14f\n", i + 1, h[i]);
+      }
 /*
   Set the quadrature points, each of which is the midpoint
   of its subinterval.
 */
-  fprintf ( fp , "\n" );
-  fprintf ( fp , "Subint    Quadrature point\n" );
-  fprintf ( fp , "\n" );
-  for ( i = 0; i < nsub; i++ )
-  {
-    xquad[i] = 0.5 * ( xn[i] + xn[i+1] );
-    fprintf ( fp , "  %8d  %14f\n", i+1, xquad[i] );
-  }
+      fprintf(fp, "\n");
+      fprintf(fp, "Subint    Quadrature point\n");
+      fprintf(fp, "\n");
+      for (i = 0; i < nsub; i++) {
+        xquad[i] = 0.5 * (xn[i] + xn[i + 1]);
+        fprintf(fp, "  %8d  %14f\n", i + 1, xquad[i]);
+      }
+    }
 /*
   Set the value of NODE, which records, for each interval,
   the node numbers at the left and right.
 */
-  fprintf ( fp , "\n" );
-  fprintf ( fp , "Subint  Left Node  Right Node\n" );
-  fprintf ( fp , "\n" );
-  for ( i = 0; i < nsub; i++ )
-  {
-    node[0+i*2] = i;
-    node[1+i*2] = i + 1;
-    fprintf ( fp , "  %8d  %8d  %8d\n", i+1, node[0+i*2], node[1+i*2] );
-  }
+#pragma omp section
+    {
+      fprintf(fp, "\n");
+      fprintf(fp, "Subint  Left Node  Right Node\n");
+      fprintf(fp, "\n");
+      for (i = 0; i < nsub; i++) {
+        node[0 + i * 2] = i;
+        node[1 + i * 2] = i + 1;
+        fprintf(fp, "  %8d  %8d  %8d\n", i + 1, node[0 + i * 2], node[1 + i * 2]);
+      }
+    }
 /*
   Starting with node 0, see if an unknown is associated with
   the node.  If so, give it an index.
 */
-  *nu = 0;
+#pragma omp section
+    {
+      *nu = 0;
 /*
   Handle first node.
 */
-  i = 0;
-  if ( ibc == 1 || ibc == 3 )
-  {
-    indx[i] = -1;
-  }
-  else
-  {
-    *nu = *nu + 1;
-    indx[i] = *nu;
-  }
+      i = 0;
+      if (ibc == 1 || ibc == 3) {
+        indx[i] = -1;
+      }
+      else {
+        *nu = *nu + 1;
+        indx[i] = *nu;
+      }
+
 /*
   Handle nodes 1 through nsub-1
 */
-  for ( i = 1; i < nsub; i++ )
-  {
-    *nu = *nu + 1;
-    indx[i] = *nu;
-  }
+      for (i = 1; i < nsub; i++) {
+        *nu = *nu + 1;
+        indx[i] = *nu;
+      }
 /*
   Handle the last node.
 /*/
-  i = nsub;
+      i = nsub;
 
-  if ( ibc == 2 || ibc == 3 )
-  {
-    indx[i] = -1;
-  }
-  else
-  {
-    *nu = *nu + 1;
-    indx[i] = *nu;
-  }
+      if (ibc == 2 || ibc == 3) {
+        indx[i] = -1;
+      }
+      else {
+        *nu = *nu + 1;
+        indx[i] = *nu;
+      }
 
-  fprintf ( fp , "\n" );
-  fprintf ( fp , "  Number of unknowns NU = %8d\n", *nu );
-  fprintf ( fp , "\n" );
-  fprintf ( fp , "  Node  Unknown\n" );
-  fprintf ( fp , "\n" );
-  for ( i = 0; i <= nsub; i++ )
-  {
-    fprintf ( fp , "  %8d  %8d\n", i, indx[i] );
+      fprintf(fp, "\n");
+      fprintf(fp, "  Number of unknowns NU = %8d\n", *nu);
+      fprintf(fp, "\n");
+      fprintf(fp, "  Node  Unknown\n");
+      fprintf(fp, "\n");
+      for (i = 0; i <= nsub; i++) {
+        fprintf(fp, "  %8d  %8d\n", i, indx[i]);
+      }
+    }
   }
   fclose(fp);
   return;
