@@ -1,7 +1,10 @@
 rm -f  output.txt
 for i in $(seq 100)
 do
+	echo $i;
+	echo $(date +"%T");
 	./p1 >> output.txt;
+	echo $(date +"%T");
 done
 
 x=0;
