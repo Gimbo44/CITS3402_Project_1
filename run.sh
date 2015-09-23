@@ -1,5 +1,5 @@
 rm -f  output.txt
-for i in $(seq 1000)
+for i in $(seq 100)
 do
 	./p1 >> output.txt;
 done
