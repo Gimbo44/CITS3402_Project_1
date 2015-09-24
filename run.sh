@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 rm -f  output.txt
 for i in $(seq 100)
 do

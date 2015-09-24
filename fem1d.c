@@ -183,7 +183,7 @@ int main ( void )
     
     
     /*Start work here*/
-    # define NSUB 1000000
+    # define NSUB 10000
     # define NL 20
 
     //double adiag[NSUB+1]; 
@@ -706,39 +706,52 @@ void geometry ( double h[], int ibc, int indx[], int nl, int node[], int nsub,
    
    */
   fprintf ( fp , "\n" );
-  omp_set_num_threads(3);
-#pragma omp parallel sections private(i)
+
+
+
+
+#pragma omp parallel sections num_threads(3) private(i)
   {
 #pragma omp section
     {
-      for (i = 0; i <= nsub; i++) {
-        xn[i] = ((double) (nsub - i) * xl
-                 + (double) i * xr)
-                / (double) (nsub);
-        fprintf(fp, "  %8d  %14f \n", i, xn[i]);
-      }
+
+
+
+      #pragma omp parallel num_threads(8)
+      {
+
+        #pragma omp for nowait
+        for (i = 0; i <= nsub; i++) {
+          xn[i] = ((double) (nsub - i) * xl
+                   + (double) i * xr)
+                  / (double) (nsub);
+          fprintf(fp, "  %8d  %14f \n", i, xn[i]);
+        }
 
 
 /*
   Set the lengths of each subinterval.
 */
-      fprintf(fp, "\n");
-      fprintf(fp, "Subint    Length\n");
-      fprintf(fp, "\n");
-      for (i = 0; i < nsub; i++) {
-        h[i] = xn[i + 1] - xn[i];
-        fprintf(fp, "  %8d  %14f\n", i + 1, h[i]);
-      }
+        fprintf(fp, "\n");
+        fprintf(fp, "Subint    Length\n");
+        fprintf(fp, "\n");
+        #pragma omp for nowait
+        for (i = 0; i < nsub; i++) {
+          h[i] = xn[i + 1] - xn[i];
+          fprintf(fp, "  %8d  %14f\n", i + 1, h[i]);
+        }
 /*
   Set the quadrature points, each of which is the midpoint
   of its subinterval.
 */
-      fprintf(fp, "\n");
-      fprintf(fp, "Subint    Quadrature point\n");
-      fprintf(fp, "\n");
-      for (i = 0; i < nsub; i++) {
-        xquad[i] = 0.5 * (xn[i] + xn[i + 1]);
-        fprintf(fp, "  %8d  %14f\n", i + 1, xquad[i]);
+        fprintf(fp, "\n");
+        fprintf(fp, "Subint    Quadrature point\n");
+        fprintf(fp, "\n");
+        #pragma omp for nowait
+        for (i = 0; i < nsub; i++) {
+          xquad[i] = 0.5 * (xn[i] + xn[i + 1]);
+          fprintf(fp, "  %8d  %14f\n", i + 1, xquad[i]);
+        }
       }
     }
 /*
