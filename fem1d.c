@@ -183,7 +183,7 @@ int main ( void )
     
     
     /*Start work here*/
-    # define NSUB 1000000
+    # define NSUB 10
     # define NL 20
 
     //double adiag[NSUB+1]; 
