@@ -7,7 +7,7 @@
 
 
 
-int main ( void );
+int main ( int argc, char *argv[]  );
 void assemble ( double adiag[], double aleft[], double arite[], double f[], 
   double h[], int indx[], int nl, int node[], int nu, int nquad, int nsub, 
   double ul, double ur, double xn[], double xquad[] );
@@ -30,7 +30,7 @@ void timestamp ( void );
 
 /******************************************************************************/
 
-int main ( void )
+int main ( int argc, char *argv[]  )
 
 /******************************************************************************/
 /*
@@ -179,9 +179,10 @@ int main ( void )
 */
 {
 
-    
+    struct timeval start, end;
+    gettimeofday(&start, NULL);
     /*Start work here*/
-    # define NSUB 1000000
+    # define NSUB atoi(argv[1])
     # define NL 20
 
     //double adiag[NSUB+1];
@@ -255,16 +256,11 @@ int main ( void )
       - Has potential to have its contents sped up
       - Has six for loops
   */
-  struct timeval start, end;
-  gettimeofday(&start, NULL);
+
 
   geometry ( h, ibc, indx, NL, node, NSUB, &nu, xl, xn, xquad, xr );
 
-  gettimeofday(&end, NULL);
-  double delta = ((end.tv_sec  - start.tv_sec) * 1000000u +
-                  end.tv_usec - start.tv_usec) / 1.e6;
 
-  printf("%12.10f\n",delta);
   /*
     Assemble the linear system.
       - Huge potential to speed it up
@@ -299,6 +295,11 @@ int main ( void )
     fclose(fp);
     /*End work here*/
 
+    gettimeofday(&end, NULL);
+    double delta = ((end.tv_sec  - start.tv_sec) * 1000000u +
+                    end.tv_usec - start.tv_usec) / 1.e6;
+
+    printf("%12.10f\n",delta);
 
     return 0;
   # undef NL
