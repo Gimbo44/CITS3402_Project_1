@@ -182,11 +182,10 @@ int main ( int argc, char *argv[]  )
     struct timeval start, end;
     gettimeofday(&start, NULL);
     /*Start work here*/
-<<<<<<< HEAD
-    # define NSUB 10
-=======
+
+
+
     # define NSUB atoi(argv[1])
->>>>>>> geometry_v4
     # define NL 20
 
     //double adiag[NSUB+1];
