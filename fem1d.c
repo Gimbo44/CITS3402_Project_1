@@ -7,7 +7,7 @@
 
 
 
-int main ( void );
+int main ( int argc, char *argv[]  );
 void assemble ( double adiag[], double aleft[], double arite[], double f[], 
   double h[], int indx[], int nl, int node[], int nu, int nquad, int nsub, 
   double ul, double ur, double xn[], double xquad[] );
@@ -30,7 +30,7 @@ void timestamp ( void );
 
 /******************************************************************************/
 
-int main ( void )
+int main ( int argc, char *argv[]  )
 
 /******************************************************************************/
 /*
@@ -178,15 +178,18 @@ int main ( void )
     differential equation is being solved.
 */
 {
+
     struct timeval start, end;
     gettimeofday(&start, NULL);
-    
-    
     /*Start work here*/
+<<<<<<< HEAD
     # define NSUB 10
+=======
+    # define NSUB atoi(argv[1])
+>>>>>>> geometry_v4
     # define NL 20
 
-    //double adiag[NSUB+1]; 
+    //double adiag[NSUB+1];
     double *adiag;
     adiag=(double *)malloc(sizeof(double)*(NSUB+1)); 
     //double aleft[NSUB+1];
@@ -257,13 +260,17 @@ int main ( void )
       - Has potential to have its contents sped up
       - Has six for loops
   */
-    geometry ( h, ibc, indx, NL, node, NSUB, &nu, xl, xn, xquad, xr );
+
+
+  geometry ( h, ibc, indx, NL, node, NSUB, &nu, xl, xn, xquad, xr );
+
+
   /*
     Assemble the linear system.
       - Huge potential to speed it up
       - 4 solo for loops and a set of nested for loops
   */
-    assemble ( adiag, aleft, arite, f, h, indx, NL, node, nu, nquad, 
+    assemble ( adiag, aleft, arite, f, h, indx, NL, node, nu, nquad,
       NSUB, ul, ur, xn, xquad );
   /*
     Print out the linear system.
@@ -291,9 +298,10 @@ int main ( void )
     timestamp ( );
     fclose(fp);
     /*End work here*/
+
     gettimeofday(&end, NULL);
     double delta = ((end.tv_sec  - start.tv_sec) * 1000000u +
-             end.tv_usec - start.tv_usec) / 1.e6;
+                    end.tv_usec - start.tv_usec) / 1.e6;
 
     printf("%12.10f\n",delta);
 
@@ -708,101 +716,102 @@ void geometry ( double h[], int ibc, int indx[], int nl, int node[], int nsub,
   fprintf ( fp , "\n" );
 
 
-  for ( i = 0; i <= nsub; i++ )
-  {
-    xn[i]  =  ( ( double ) ( nsub - i ) * xl
-              + ( double )          i   * xr )
-              / ( double ) ( nsub );
-    fprintf ( fp , "  %8d  %14f \n", i, xn[i] );
-  }
+    for (i = 0; i <= nsub; i++) {
+      xn[i] = ((double) (nsub - i) * xl + (double) i * xr) / (double) (nsub);
+      fprintf(fp, "  %8d  %14f \n", i, xn[i]);
+    }
 
 
 /*
   Set the lengths of each subinterval.
 */
-  fprintf ( fp , "\n" );
-  fprintf ( fp , "Subint    Length\n" );
-  fprintf ( fp , "\n" );
-  for ( i = 0; i < nsub; i++ )
-  {
-    h[i] = xn[i+1] - xn[i];
-    fprintf ( fp , "  %8d  %14f\n", i+1, h[i] );
-  }
+    fprintf(fp, "\n");
+    fprintf(fp, "Subint    Length\n");
+    fprintf(fp, "\n");
+
+    for (i = 0; i < nsub; i++) {
+      h[i] = xn[i + 1] - xn[i];
+      fprintf(fp, "  %8d  %14f\n", i + 1, h[i]);
+    }
+
 /*
   Set the quadrature points, each of which is the midpoint
   of its subinterval.
 */
-  fprintf ( fp , "\n" );
-  fprintf ( fp , "Subint    Quadrature point\n" );
-  fprintf ( fp , "\n" );
-  for ( i = 0; i < nsub; i++ )
-  {
-    xquad[i] = 0.5 * ( xn[i] + xn[i+1] );
-    fprintf ( fp , "  %8d  %14f\n", i+1, xquad[i] );
-  }
+    fprintf(fp, "\n");
+    fprintf(fp, "Subint    Quadrature point\n");
+    fprintf(fp, "\n");
+
+    for (i = 0; i < nsub; i++) {
+      xquad[i] = 0.5 * (xn[i] + xn[i + 1]);
+      fprintf(fp, "  %8d  %14f\n", i + 1, xquad[i]);
+    }
+
 /*
   Set the value of NODE, which records, for each interval,
   the node numbers at the left and right.
 */
-  fprintf ( fp , "\n" );
-  fprintf ( fp , "Subint  Left Node  Right Node\n" );
-  fprintf ( fp , "\n" );
-  for ( i = 0; i < nsub; i++ )
-  {
-    node[0+i*2] = i;
-    node[1+i*2] = i + 1;
-    fprintf ( fp , "  %8d  %8d  %8d\n", i+1, node[0+i*2], node[1+i*2] );
-  }
+
+    fprintf(fp, "\n");
+    fprintf(fp, "Subint  Left Node  Right Node\n");
+    fprintf(fp, "\n");
+
+    for (i = 0; i < nsub; i++) {
+      node[0 + i * 2] = i;
+      node[1 + i * 2] = i + 1;
+      fprintf(fp, "  %8d  %8d  %8d\n", i + 1, node[0 + i * 2], node[1 + i * 2]);
+    }
+
 /*
   Starting with node 0, see if an unknown is associated with
   the node.  If so, give it an index.
 */
-  *nu = 0;
+
+    *nu = 0;
 /*
   Handle first node.
 */
-  i = 0;
-  if ( ibc == 1 || ibc == 3 )
-  {
-    indx[i] = -1;
-  }
-  else
-  {
-    *nu = *nu + 1;
-    indx[i] = *nu;
-  }
+    i = 0;
+    if (ibc == 1 || ibc == 3) {
+      indx[i] = -1;
+    }
+    else {
+      *nu = *nu + 1;
+      indx[i] = *nu;
+    }
+
 /*
   Handle nodes 1 through nsub-1
 */
-  for ( i = 1; i < nsub; i++ )
-  {
-    *nu = *nu + 1;
-    indx[i] = *nu;
-  }
+
+    for (i = 1; i < nsub; i++) {
+      *nu = *nu + 1;
+      indx[i] = *nu;
+    }
 /*
   Handle the last node.
 /*/
-  i = nsub;
+    i = nsub;
 
-  if ( ibc == 2 || ibc == 3 )
-  {
-    indx[i] = -1;
-  }
-  else
-  {
-    *nu = *nu + 1;
-    indx[i] = *nu;
-  }
+    if (ibc == 2 || ibc == 3) {
+      indx[i] = -1;
+    }
+    else {
+      *nu = *nu + 1;
+      indx[i] = *nu;
+    }
 
-  fprintf ( fp , "\n" );
-  fprintf ( fp , "  Number of unknowns NU = %8d\n", *nu );
-  fprintf ( fp , "\n" );
-  fprintf ( fp , "  Node  Unknown\n" );
-  fprintf ( fp , "\n" );
-  for ( i = 0; i <= nsub; i++ )
-  {
-    fprintf ( fp , "  %8d  %8d\n", i, indx[i] );
-  }
+    fprintf(fp, "\n");
+    fprintf(fp, "  Number of unknowns NU = %8d\n", *nu);
+    fprintf(fp, "\n");
+    fprintf(fp, "  Node  Unknown\n");
+    fprintf(fp, "\n");
+
+    for (i = 0; i <= nsub; i++) {
+      fprintf(fp, "  %8d  %8d\n", i, indx[i]);
+    }
+
+
   fclose(fp);
   return;
 }
