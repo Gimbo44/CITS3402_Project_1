@@ -683,7 +683,6 @@ void geometry ( double h[], int ibc, int indx[], int nl, int node[], int nsub,
 */
 {
   int i;
-  int counter;
 /*
   Set the value of XN, the locations of the nodes.
 */
@@ -708,8 +707,6 @@ void geometry ( double h[], int ibc, int indx[], int nl, int node[], int nsub,
               / (double) (nsub);
       fprintf(fp, "  %8d  %14f \n", i, xn[i]);
     }
-
-#pragma omp barrier
 /*
   Set the lengths of each subinterval.
 */
@@ -741,6 +738,7 @@ void geometry ( double h[], int ibc, int indx[], int nl, int node[], int nsub,
 */
     #pragma omp single
     fprintf(fp, "\nSubint  Left Node  Right Node\n\n");
+
     // COme back to, I think I can reduce this by two...
     #pragma omp for
     for (i = 0; i < nsub; i++) {
@@ -748,16 +746,17 @@ void geometry ( double h[], int ibc, int indx[], int nl, int node[], int nsub,
       node[1 + i * 2] = i + 1;
       fprintf(fp, "  %8d  %8d  %8d\n", i + 1, node[0 + i * 2], node[1 + i * 2]);
     }
-/*
-  Starting with node 0, see if an unknown is associated with
-  the node.  If so, give it an index.
-*/
+    /*
+      Starting with node 0, see if an unknown is associated with
+      the node.  If so, give it an index.
+    */
     #pragma omp single
     {
       *nu = 0;
-/*
-  Handle first node.
-*/
+
+    /*
+      Handle first node.
+    */
       i = 0;
       if (ibc == 1 || ibc == 3) {
         indx[i] = -1;
@@ -766,13 +765,11 @@ void geometry ( double h[], int ibc, int indx[], int nl, int node[], int nsub,
         *nu = *nu + 1;
         indx[i] = *nu;
       }
-/*
-  Handle nodes 1 through nsub-1
-*/
-      counter = *nu;
+    /*
+      Handle nodes 1 through nsub-1
+    */
     }
-    #pragma omp barrier
-    //need to wait till the above omp pragma is completed as it affects the next loop
+
 
     // **** POTENTIAL ****
     // implemented reduction in this loop by creating a temporary variable "counter" to hold the
@@ -782,10 +779,10 @@ void geometry ( double h[], int ibc, int indx[], int nl, int node[], int nsub,
       *nu = *nu + 1;
       indx[i] = *nu;
     }
-/*
-  Handle the last node.
-/*/
-#pragma omp single
+    /*
+      Handle the last node.
+    /*/
+    #pragma omp single
     {
 
       i = nsub;
@@ -805,8 +802,8 @@ void geometry ( double h[], int ibc, int indx[], int nl, int node[], int nsub,
       fprintf(fp, "  Node  Unknown\n");
       fprintf(fp, "\n");
     }
-#pragma omp barrier
-#pragma omp for
+
+    #pragma omp for
     for (i = 0; i <= nsub; i++) {
       fprintf(fp, "  %8d  %8d\n", i, indx[i]);
     }
