@@ -3,7 +3,7 @@ x=0;
 for ii in $(seq 7)
 do
 	rm -f  output/v1.1_$ii.txt
-	for i in $(seq 100)
+	for i in $(seq 20)
 	do
 		echo $i
 		x=$(echo "scale=20; 10^$ii" | bc);
@@ -18,7 +18,7 @@ done
 
 
 
-for ii in $(seq 9)
+for ii in $(seq 7)
 do
 	x=0;
 	size=0;
