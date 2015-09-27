@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 rm -f  output.txt
-for i in $(seq 100)
+for i in $(seq 5)
 do
 	echo $i;
 	echo $(date +"%T");
