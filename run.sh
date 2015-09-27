@@ -2,7 +2,7 @@
 x=0;
 for ii in $(seq 7)
 do
-	rm -f  output/vanilla$ii.txt
+	rm -f  output/v2.0_$ii.txt;
 	for i in $(seq 100)
 	do
 		echo $i
@@ -10,7 +10,7 @@ do
 		echo $x;
 		echo $(date +"%T")
 
-		./p1 $x >> output/vanilla$ii.txt;
+		./p1 $x >> output/v2.0_$ii.txt;
 		echo $(date +"%T");
 	done
 done
@@ -18,11 +18,11 @@ done
 
 
 
-for ii in $(seq 9)
+for ii in $(seq 7)
 do
 	x=0;
 	size=0;
-	filelines=`cat output/vanilla$ii.txt`
+	filelines=`cat output/v2.0_$ii.txt`
 	for line in $filelines; do
 
 		size=$(($size+1));
