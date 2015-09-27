@@ -6,16 +6,6 @@ project1
 README.md
 .idea/*
 random_notes/*
-<<<<<<< HEAD
-t1
 
-=======
-test.c
-t1
-run1.sh
-output/*
-<<<<<<< HEAD
->>>>>>> 2fdc9e9462ef0f99af7fef90962dfbf0d4ca44cf
-=======
 run.sh
->>>>>>> 931091805d33fd5f902c546977756614dcd8faed
+output/*

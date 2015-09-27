@@ -1,13 +1,18 @@
 #!/usr/bin/env bash
-rm -f  output.txt
-for i in $(seq 5)
+x=0;
+for ii in $(seq 7)
 do
-	echo $i;
-	echo $(date +"%T");
-	rm -f out.txt;
-	./p1 >> output.txt;
-	echo $(date +"%T");
-
+	rm -f  output/v1.1_$ii.txt
+	for i in $(seq 100)
+	do
+		echo $i
+		x=$(echo "scale=20; 10^$ii" | bc);
+		echo $x;
+		echo $(date +"%T")
+		rm -f out.txt
+		./p1 $x >> output/v1.1_$ii.txt;
+		echo $(date +"%T");
+	done
 done
 
 
@@ -17,17 +22,16 @@ for ii in $(seq 9)
 do
 	x=0;
 	size=0;
-	filelines=`cat output/vanilla$ii.txt`
+	filelines=`cat output/v1.1_$ii.txt`
 	for line in $filelines; do
 
 		size=$(($size+1));
 		x=$(echo "scale=20; $x+$line" | bc)
-		echo "Vanilla $ii:"
+		echo "v1.1 $ii:"
 		echo "scale=10; $x/$size" | bc
 
 
 	done
 done
-
 
 
