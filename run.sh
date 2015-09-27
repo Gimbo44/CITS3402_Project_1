@@ -4,6 +4,7 @@ for i in $(seq 100)
 do
 	echo $i;
 	echo $(date +"%T");
+	rm -f out.txt;
 	./p1 >> output.txt;
 	echo $(date +"%T");
 done
