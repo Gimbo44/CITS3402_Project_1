@@ -773,6 +773,8 @@ void geometry ( double h[], int ibc, int indx[], int nl, int node[], int nsub,
     }
     #pragma omp barrier
     //need to wait till the above omp pragma is completed as it affects the next loop
+
+    // **** POTENTIAL ****
     // implemented reduction in this loop by creating a temporary variable "counter" to hold the
     // incremented value, then *nu is assigned the value of counter.
     #pragma omp for

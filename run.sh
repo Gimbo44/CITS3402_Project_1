@@ -2,7 +2,7 @@
 x=0;
 for ii in $(seq 7)
 do
-	rm -f  output/v1.1_$ii.txt
+	rm -f  output/v1.3_$ii.txt
 	for i in $(seq 20)
 	do
 		echo $i
@@ -10,7 +10,7 @@ do
 		echo $x;
 		echo $(date +"%T")
 		rm -f out.txt
-		./p1 $x >> output/v1.1_$ii.txt;
+		./p1 $x >> output/v1.3_$ii.txt;
 		echo $(date +"%T");
 	done
 done
@@ -22,12 +22,12 @@ for ii in $(seq 7)
 do
 	x=0;
 	size=0;
-	filelines=`cat output/v1.1_$ii.txt`
+	filelines=`cat output/v1.3_$ii.txt`
 	for line in $filelines; do
 
 		size=$(($size+1));
 		x=$(echo "scale=20; $x+$line" | bc)
-		echo "v1.1 $ii:"
+		echo "v1.3 $ii:"
 		echo "scale=10; $x/$size" | bc
 
 
