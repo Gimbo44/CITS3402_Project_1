@@ -10,4 +10,3 @@ test.c
 t1
 run1.sh
 output/*
-run.sh

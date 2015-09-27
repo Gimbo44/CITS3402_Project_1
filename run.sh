@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 x=0;
-for ii in $(seq 9)
+for ii in $(seq 7)
 do
 	rm -f  output/vanilla$ii.txt
-	for i in $(seq 1)
+	for i in $(seq 100)
 	do
 		echo $i
 		x=$(echo "scale=20; 10^$ii" | bc);
