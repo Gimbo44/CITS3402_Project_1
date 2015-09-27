@@ -7,7 +7,7 @@
 
 
 
-int main ( void );
+int main ( int argc, char *argv[]  );
 void assemble ( double adiag[], double aleft[], double arite[], double f[], 
   double h[], int indx[], int nl, int node[], int nu, int nquad, int nsub, 
   double ul, double ur, double xn[], double xquad[] );
@@ -30,7 +30,7 @@ void timestamp ( void );
 
 /******************************************************************************/
 
-int main ( void )
+int main ( int argc, char *argv[]  )
 
 /******************************************************************************/
 /*
@@ -178,15 +178,19 @@ int main ( void )
     differential equation is being solved.
 */
 {
+
     struct timeval start, end;
     gettimeofday(&start, NULL);
-    
-    
     /*Start work here*/
-    # define NSUB 100000
+
+
+
+
+    # define NSUB atoi(argv[1])
+
     # define NL 20
 
-    //double adiag[NSUB+1]; 
+    //double adiag[NSUB+1];
     double *adiag;
     adiag=(double *)malloc(sizeof(double)*(NSUB+1)); 
     //double aleft[NSUB+1];
@@ -254,11 +258,15 @@ int main ( void )
   /*
     Compute the geometric quantities.
   */
-    geometry ( h, ibc, indx, NL, node, NSUB, &nu, xl, xn, xquad, xr );
+
+
+  geometry ( h, ibc, indx, NL, node, NSUB, &nu, xl, xn, xquad, xr );
+
+
   /*
     Assemble the linear system.
   */
-    assemble ( adiag, aleft, arite, f, h, indx, NL, node, nu, nquad, 
+    assemble ( adiag, aleft, arite, f, h, indx, NL, node, nu, nquad,
       NSUB, ul, ur, xn, xquad );
   /*
     Print out the linear system.
@@ -283,9 +291,10 @@ int main ( void )
     timestamp ( );
     fclose(fp);
     /*End work here*/
+
     gettimeofday(&end, NULL);
     double delta = ((end.tv_sec  - start.tv_sec) * 1000000u +
-             end.tv_usec - start.tv_usec) / 1.e6;
+                    end.tv_usec - start.tv_usec) / 1.e6;
 
     printf("%12.10f\n",delta);
 
@@ -692,6 +701,7 @@ void geometry ( double h[], int ibc, int indx[], int nl, int node[], int nsub,
    */
   fprintf ( fp , "\n" );
 
+
 #pragma omp parallel
   {
 #pragma omp for private(i)
@@ -709,6 +719,7 @@ void geometry ( double h[], int ibc, int indx[], int nl, int node[], int nsub,
     fprintf(fp, "\n");
     fprintf(fp, "Subint    Length\n");
     fprintf(fp, "\n");
+
 #pragma omp for private(i)
     for (i = 0; i < nsub; i++) {
       h[i] = xn[i + 1] - xn[i];
@@ -721,6 +732,7 @@ void geometry ( double h[], int ibc, int indx[], int nl, int node[], int nsub,
     fprintf(fp, "\n");
     fprintf(fp, "Subint    Quadrature point\n");
     fprintf(fp, "\n");
+
 #pragma omp for private(i)
     for (i = 0; i < nsub; i++) {
       xquad[i] = 0.5 * (xn[i] + xn[i + 1]);
@@ -730,6 +742,7 @@ void geometry ( double h[], int ibc, int indx[], int nl, int node[], int nsub,
   Set the value of NODE, which records, for each interval,
   the node numbers at the left and right.
 */
+
     fprintf(fp, "\n");
     fprintf(fp, "Subint  Left Node  Right Node\n");
     fprintf(fp, "\n");
@@ -767,6 +780,7 @@ void geometry ( double h[], int ibc, int indx[], int nl, int node[], int nsub,
   Handle the last node.
 /*/
     i = nsub;
+
 
     if (ibc == 2 || ibc == 3) {
       indx[i] = -1;
