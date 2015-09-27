@@ -260,7 +260,7 @@ int main ( int argc, char *argv[]  )
   */
 
 
-  geometry ( h, ibc, indx, NL, node, NSUB, &nu, xl, xn, xquad, xr );
+    geometry ( h, ibc, indx, NL, node, NSUB, &nu, xl, xn, xquad, xr );
 
 
   /*
@@ -450,31 +450,27 @@ void assemble ( double adiag[], double aleft[], double arite[], double f[],
   Zero out the arrays that hold the coefficients of the matrix
   and the right hand side.
 */
-#pragma omp parallel
-  {
-#pragma omp for private(i)
+
     for (i = 0; i < nu; i++) {
       f[i] = 0.0;
     }
-#pragma omp for private(i)
+
     for (i = 0; i < nu; i++) {
       adiag[i] = 0.0;
     }
-#pragma omp for private(i)
+
     for (i = 0; i < nu; i++) {
       aleft[i] = 0.0;
     }
-#pragma omp for private(i)
+
     for (i = 0; i < nu; i++) {
       arite[i] = 0.0;
     }
-  }
+
 /*
   For interval number IE,
 */
-#pragma omp parallel
-  {
-#pragma omp for private(ie,iq,il,jl)
+
     for (ie = 0; ie < nsub; ie++) {
       he = h[ie];
       xleft = xn[node[0 + ie * 2]];
@@ -553,7 +549,7 @@ void assemble ( double adiag[], double aleft[], double arite[], double f[],
         }
       }
     }
-  }
+
   return;
 }
 /******************************************************************************/
@@ -687,6 +683,7 @@ void geometry ( double h[], int ibc, int indx[], int nl, int node[], int nsub,
 */
 {
   int i;
+  int counter;
 /*
   Set the value of XN, the locations of the nodes.
 */
@@ -704,7 +701,7 @@ void geometry ( double h[], int ibc, int indx[], int nl, int node[], int nsub,
 
 #pragma omp parallel
   {
-#pragma omp for private(i)
+    #pragma omp for
     for (i = 0; i <= nsub; i++) {
       xn[i] = ((double) (nsub - i) * xl
                + (double) i * xr)
@@ -712,15 +709,15 @@ void geometry ( double h[], int ibc, int indx[], int nl, int node[], int nsub,
       fprintf(fp, "  %8d  %14f \n", i, xn[i]);
     }
 
-
+#pragma omp barrier
 /*
   Set the lengths of each subinterval.
 */
-    fprintf(fp, "\n");
-    fprintf(fp, "Subint    Length\n");
-    fprintf(fp, "\n");
+    #pragma omp single
+    fprintf(fp, "\nSubint    Length\n\n");
 
-#pragma omp for private(i)
+
+    #pragma omp for
     for (i = 0; i < nsub; i++) {
       h[i] = xn[i + 1] - xn[i];
       fprintf(fp, "  %8d  %14f\n", i + 1, h[i]);
@@ -729,11 +726,11 @@ void geometry ( double h[], int ibc, int indx[], int nl, int node[], int nsub,
   Set the quadrature points, each of which is the midpoint
   of its subinterval.
 */
-    fprintf(fp, "\n");
-    fprintf(fp, "Subint    Quadrature point\n");
-    fprintf(fp, "\n");
+    #pragma omp single
+    fprintf(fp, "\nSubint    Quadrature point\n\n");
 
-#pragma omp for private(i)
+
+    #pragma omp for
     for (i = 0; i < nsub; i++) {
       xquad[i] = 0.5 * (xn[i] + xn[i + 1]);
       fprintf(fp, "  %8d  %14f\n", i + 1, xquad[i]);
@@ -742,11 +739,10 @@ void geometry ( double h[], int ibc, int indx[], int nl, int node[], int nsub,
   Set the value of NODE, which records, for each interval,
   the node numbers at the left and right.
 */
-
-    fprintf(fp, "\n");
-    fprintf(fp, "Subint  Left Node  Right Node\n");
-    fprintf(fp, "\n");
-#pragma omp for private(i)
+    #pragma omp single
+    fprintf(fp, "\nSubint  Left Node  Right Node\n\n");
+    // COme back to, I think I can reduce this by two...
+    #pragma omp for
     for (i = 0; i < nsub; i++) {
       node[0 + i * 2] = i;
       node[1 + i * 2] = i + 1;
@@ -756,22 +752,30 @@ void geometry ( double h[], int ibc, int indx[], int nl, int node[], int nsub,
   Starting with node 0, see if an unknown is associated with
   the node.  If so, give it an index.
 */
-    *nu = 0;
+    #pragma omp single
+    {
+      *nu = 0;
 /*
   Handle first node.
 */
-    i = 0;
-    if (ibc == 1 || ibc == 3) {
-      indx[i] = -1;
-    }
-    else {
-      *nu = *nu + 1;
-      indx[i] = *nu;
-    }
+      i = 0;
+      if (ibc == 1 || ibc == 3) {
+        indx[i] = -1;
+      }
+      else {
+        *nu = *nu + 1;
+        indx[i] = *nu;
+      }
 /*
   Handle nodes 1 through nsub-1
 */
-#pragma omp for private(i)
+      counter = *nu;
+    }
+    #pragma omp barrier
+    //need to wait till the above omp pragma is completed as it affects the next loop
+    // implemented reduction in this loop by creating a temporary variable "counter" to hold the
+    // incremented value, then *nu is assigned the value of counter.
+    #pragma omp for
     for (i = 1; i < nsub; i++) {
       *nu = *nu + 1;
       indx[i] = *nu;
@@ -779,23 +783,28 @@ void geometry ( double h[], int ibc, int indx[], int nl, int node[], int nsub,
 /*
   Handle the last node.
 /*/
-    i = nsub;
+#pragma omp single
+    {
+
+      i = nsub;
 
 
-    if (ibc == 2 || ibc == 3) {
-      indx[i] = -1;
+      if (ibc == 2 || ibc == 3) {
+        indx[i] = -1;
+      }
+      else {
+        *nu = *nu + 1;
+        indx[i] = *nu;
+      }
+
+      fprintf(fp, "\n");
+      fprintf(fp, "  Number of unknowns NU = %8d\n", *nu);
+      fprintf(fp, "\n");
+      fprintf(fp, "  Node  Unknown\n");
+      fprintf(fp, "\n");
     }
-    else {
-      *nu = *nu + 1;
-      indx[i] = *nu;
-    }
-
-    fprintf(fp, "\n");
-    fprintf(fp, "  Number of unknowns NU = %8d\n", *nu);
-    fprintf(fp, "\n");
-    fprintf(fp, "  Node  Unknown\n");
-    fprintf(fp, "\n");
-#pragma omp for private(i)
+#pragma omp barrier
+#pragma omp for
     for (i = 0; i <= nsub; i++) {
       fprintf(fp, "  %8d  %8d\n", i, indx[i]);
     }
@@ -1021,7 +1030,7 @@ void output ( double f[], int ibc, int indx[], int nsub, int nu, double ul,
   fprintf ( fp , "\n" );
   fprintf ( fp , "  Node    X(I)        U(X(I))\n" );
   fprintf ( fp , "\n" );
-#pragma omp parallel for private(i)
+
   for ( i = 0; i <= nsub; i++ )
   {
 /*
@@ -1239,7 +1248,7 @@ void prsys ( double adiag[], double aleft[], double arite[], double f[],
   fprintf ( fp , "\n" );
   fprintf ( fp , "Equation  ALEFT  ADIAG  ARITE  RHS\n" );
   fprintf ( fp , "\n" );
-#pragma omp parallel for private(i)
+
   for ( i = 0; i < nu; i++ )
   {
     fprintf ( fp , "  %8d  %14f  %14f  %14f  %14f\n",
@@ -1338,9 +1347,7 @@ void solve ( double adiag[], double aleft[], double arite[], double f[],
   needed for the backsolve.
 */
   arite[0] = arite[0] / adiag[0];
-#pragma omp parallel
-  {
-#pragma omp for private(i)
+
     for (i = 1; i < nu - 1; i++) {
       adiag[i] = adiag[i] - aleft[i] * arite[i - 1];
       arite[i] = arite[i] / adiag[i];
@@ -1351,18 +1358,18 @@ void solve ( double adiag[], double aleft[], double arite[], double f[],
   matrix.
 */
     f[0] = f[0] / adiag[0];
-#pragma omp for private(i)
+
     for (i = 1; i < nu; i++) {
       f[i] = (f[i] - aleft[i] * f[i - 1]) / adiag[i];
     }
 /*
   And now carry out the steps of "back substitution".
 */
-#pragma omp for private(i)
+
     for (i = nu - 2; 0 <= i; i--) {
       f[i] = f[i] - arite[i] * f[i + 1];
     }
-  }
+
   return;
 }
 /******************************************************************************/
