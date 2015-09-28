@@ -1250,7 +1250,7 @@ void prsys ( double adiag[], double aleft[], double arite[], double f[],
   fprintf ( fp , "\n" );
   fprintf ( fp , "Equation  ALEFT  ADIAG  ARITE  RHS\n" );
   fprintf ( fp , "\n" );
-
+#pragma omp parallel for schedule(guided)
   for ( i = 0; i < nu; i++ )
   {
     fprintf ( fp , "  %8d  %14f  %14f  %14f  %14f\n",
