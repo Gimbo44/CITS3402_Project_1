@@ -1352,7 +1352,38 @@ void solve ( double adiag[], double aleft[], double arite[], double f[],
 
       arite[0] = arite[0] / adiag[0];
 
-#pragma omp parallel num_threads(1)
+/*
+ * TLDR:  No way of parallelizing this code without corrupting the output.
+ *
+ *
+ * The below section was a bit of a failed attempted to parallelize this section of code.
+ * The initial assumption was that each of the for loops could be ran in such a manner that
+ * would allow x threads to share the work load. This was painfully not the case.
+ *
+ * The code in all three loops makes references to other data which may/may not have been initialized
+ * Eg in the first loop:
+ *
+ *    adiag[i] = adiag[i] - aleft[i] * arite[i - 1];
+ *    arite[i] = arite[i] / adiag[i];
+ *
+ * We will assume NSUB = 10 therefore we have
+ *
+ *    1 2 3 4 5 6 7 8 9 10
+ *
+ * If each thread gets an even proportion (we will say for now there are two threads)
+ * thread 1:  1,2,3,4,5
+ * thread 2:  6,7,8,9,10
+ *
+ * therefore, when thread 2 starts it will make reference to index 5 of arite which hasn't had the
+ * following code applied to it yet:
+ *
+ *     arite[i] = arite[i] / adiag[i];
+ *
+ * Therefore, due to limitation on all three of these loop contents it isn't possible to
+ * use multi-threading.
+ */
+
+#pragma omp parallel
   {
     #pragma omp for schedule(static)
     for (i = 1; i < nu - 1; i++) {
@@ -1360,15 +1391,17 @@ void solve ( double adiag[], double aleft[], double arite[], double f[],
       arite[i] = arite[i] / adiag[i];
     }
     #pragma omp single
-    adiag[nu - 1] = adiag[nu - 1] - aleft[nu - 1] * arite[nu - 2];
+    {
+      adiag[nu - 1] = adiag[nu - 1] - aleft[nu - 1] * arite[nu - 2];
 /*
   Carry out the same elimination steps on F that were done to the
   matrix.
 */
-    #pragma omp single
-    f[0] = f[0] / adiag[0];
+
+      f[0] = f[0] / adiag[0];
+    }
     #pragma omp barrier
-    #pragma omp for
+    #pragma omp for schedule(static)
     for (i = 1; i < nu; i++) {
       f[i] = (f[i] - aleft[i] * f[i - 1]) / adiag[i];
     }
@@ -1376,7 +1409,7 @@ void solve ( double adiag[], double aleft[], double arite[], double f[],
   And now carry out the steps of "back substitution".
 */
 #pragma omp barrier
-#pragma omp for
+#pragma omp for schedule(static)
     for (i = nu - 2; 0 <= i; i--) {
       f[i] = f[i] - arite[i] * f[i + 1];
     }
