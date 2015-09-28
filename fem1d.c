@@ -486,7 +486,7 @@ void assemble ( double adiag[], double aleft[], double arite[], double f[],
    *
    *
    */
-    #pragma omp parallel for schedule(static)
+    #pragma omp parallel for
     for (i = 0; i < nu; i++) {
       f[i] = 0.0;
       adiag[i] = 0.0;

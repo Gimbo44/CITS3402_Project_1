@@ -27,11 +27,12 @@ do
 
 		size=$(($size+1));
 		x=$(echo "scale=20; $x+$line" | bc)
-		echo "Vanilla $ii:"
-		echo "scale=10; $x/$size" | bc
+
 
 
 	done
+	echo "Vanilla $ii:"
+	echo "scale=10; $x/$size" | bc
 done
 
 
