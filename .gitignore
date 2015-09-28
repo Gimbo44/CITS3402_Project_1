@@ -12,3 +12,6 @@ run1.sh
 output/*
 run.sh
 output1/*
+.gitignore~
+bench.txt
+

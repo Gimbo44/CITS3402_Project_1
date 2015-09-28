@@ -1348,31 +1348,39 @@ void solve ( double adiag[], double aleft[], double arite[], double f[],
   Carry out Gauss elimination on the matrix, saving information
   needed for the backsolve.
 */
-  arite[0] = arite[0] / adiag[0];
 
-  for ( i = 1; i < nu - 1; i++ )
+
+      arite[0] = arite[0] / adiag[0];
+
+#pragma omp parallel num_threads(1)
   {
-    adiag[i] = adiag[i] - aleft[i] * arite[i-1];
-    arite[i] = arite[i] / adiag[i];
-  }
-  adiag[nu-1] = adiag[nu-1] - aleft[nu-1] * arite[nu-2];
+    #pragma omp for schedule(static)
+    for (i = 1; i < nu - 1; i++) {
+      adiag[i] = adiag[i] - aleft[i] * arite[i - 1];
+      arite[i] = arite[i] / adiag[i];
+    }
+    #pragma omp single
+    adiag[nu - 1] = adiag[nu - 1] - aleft[nu - 1] * arite[nu - 2];
 /*
   Carry out the same elimination steps on F that were done to the
   matrix.
 */
-  f[0] = f[0] / adiag[0];
-  for ( i = 1; i < nu; i++ )
-  {
-    f[i] = ( f[i] - aleft[i] * f[i-1] ) / adiag[i];
-  }
+    #pragma omp single
+    f[0] = f[0] / adiag[0];
+    #pragma omp barrier
+    #pragma omp for
+    for (i = 1; i < nu; i++) {
+      f[i] = (f[i] - aleft[i] * f[i - 1]) / adiag[i];
+    }
 /*
   And now carry out the steps of "back substitution".
 */
-  for ( i = nu - 2; 0 <= i; i-- )
-  {
-    f[i] = f[i] - arite[i] * f[i+1];
+#pragma omp barrier
+#pragma omp for
+    for (i = nu - 2; 0 <= i; i--) {
+      f[i] = f[i] - arite[i] * f[i + 1];
+    }
   }
-
   return;
 }
 /******************************************************************************/
