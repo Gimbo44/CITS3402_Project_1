@@ -456,16 +456,32 @@ void assemble ( double adiag[], double aleft[], double arite[], double f[],
   Zero out the arrays that hold the coefficients of the matrix
   and the right hand side.
 */
-#pragma omp parallel
-  {
-#pragma omp for schedule(guided)
+
+  /*
+   * ==============================================================================================
+   * CODE COMMENT
+   * ==============================================================================================
+   * Code version 2.0
+   *
+   * Below is the biggest potential for parallelization in this program.
+   * The first thing I did to increase performance in this application was to combine four for loops into
+   * a single loop that you see below containing the following lines of code:
+   *
+   *    f[i] = 0.0;
+   *    adiag[i] = 0.0;
+   *    aleft[i] = 0.0;
+   *    arite[i] = 0.0;
+   *
+   * By its self it made some small improvements in the run time.
+   */
+
     for (i = 0; i < nu; i++) {
       f[i] = 0.0;
       adiag[i] = 0.0;
       aleft[i] = 0.0;
       arite[i] = 0.0;
     }
-  }
+
 /*
   For interval number IE,
 */
