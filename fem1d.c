@@ -698,7 +698,32 @@ void geometry ( double h[], int ibc, int indx[], int nl, int node[], int nsub,
    */
   fprintf ( fp , "\n" );
 
-
+/*
+ * =====================================================================================================================
+ * Project Comments
+ * =====================================================================================================================
+ *  Version 1.0:
+ *  ______________________________
+ *
+ *  Building off of version 0.2, Wrapped the whole function in a parallel region.
+ *  Had issues with earlier attempts where the output was being distorted and there were multiple print statements being
+ *  made.
+ *
+ *  This issue was resolved by using:
+ *      #pragma omp single
+ *      #pragma omp barrier (to make sure that the threads caught up to each other)
+ *
+ *  Results:
+ *  - Found that the data was looking a bit strange, this was due to the fact that I was parallelizing
+ *    for loops which make calculations based on previous iterations calculations. Because of this backwards calculation,
+ *    parallelization is not possible.
+ *
+ *  Version 1.1:
+ *  ______________________________
+ *
+ *  
+ *
+ */
 #pragma omp parallel
   {
     #pragma omp for
