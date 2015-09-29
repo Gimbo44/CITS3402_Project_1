@@ -1265,11 +1265,23 @@ void prsys ( double adiag[], double aleft[], double arite[], double f[],
    * to give some performance improvements.
    *
    * Result:
+   * There was some consistent improvement in the run-time which was expected as the number of iterations was cut down.
+   *
+   * Version 3.1:
+   * ___________________________
+   * This version I wanted to try and expand on the performance gains by parallelizing the code.
+   * I'm concerned that due to the reduced iteration size, benefits of parallelizing the code will only be seen at
+   * very high values of nu (which are equivalent to NSUB)
+   *
+   * Decided to implement a static schedule in order to keep all threads busy
+   * Capped the thread number to 4 as that is the number of physical cores present on the testing environment.
+   * Result:
    *
    *
    */
 
   if(nu % 2 == 0){
+    #pragma omp parallel for schedule(static,1) num_threads(4)
     for ( i = 0; i < nu; i+=2 )
     {
       fprintf ( fp , "  %8d  %14f  %14f  %14f  %14f\n", i + 1, aleft[i], adiag[i], arite[i], f[i] );
@@ -1277,7 +1289,7 @@ void prsys ( double adiag[], double aleft[], double arite[], double f[],
     }
   }
   else{
-
+    #pragma omp parallel for schedule(static,1) num_threads(4)
     for ( i = 1; i < nu; i+=2 )
     {
       fprintf ( fp , "  %8d  %14f  %14f  %14f  %14f\n", i, aleft[i-1], adiag[i-1], arite[i-1], f[i-1] );
