@@ -502,6 +502,8 @@ void assemble ( double adiag[], double aleft[], double arite[], double f[],
    * gave worse performance.
    *
    * Just for safety, I've declared all variables inside the parallel region so each thread will have its private variable.
+   * the performace of the new code compared to the vanilla code showed a loss in performance. This could be due to the small
+   * NL value. The inner iterations depend on its value so potentially increasing it will provide a gain in the performance.
    */
     //#pragma omp parallel for
     int i;
