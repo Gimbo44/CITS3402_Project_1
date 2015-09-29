@@ -1250,8 +1250,27 @@ void prsys ( double adiag[], double aleft[], double arite[], double f[],
   fprintf ( fp , "\n" );
   fprintf ( fp , "Equation  ALEFT  ADIAG  ARITE  RHS\n" );
   fprintf ( fp , "\n" );
+  /*
+   * ===============================================================================================================
+   * Project Comments
+   * ===============================================================================================================
+   * Version 3.0:
+   * ____________________________
+   * This function is a very basic function as it only contains a single for loop.
+   * The room for optimisation is quite small as the work isn't very complex.
+   * This first version I looked at how I could reduce the number of iterations and focus on
+   * improving the linear performance.
+   *
+   * I broke the code up into two sections, even and odd values of nu. I hoped to half the iteration size of the for loop
+   * to give some performance improvements.
+   *
+   * Result:
+   *
+   *
+   */
+  printf("%d\n",nu);
   if(nu % 2 == 0){
-    #pragma omp parallel for
+    printf("even");
     for ( i = 0; i < nu; i+=2 )
     {
       fprintf ( fp , "  %8d  %14f  %14f  %14f  %14f\n", i + 1, aleft[i], adiag[i], arite[i], f[i] );
@@ -1259,11 +1278,11 @@ void prsys ( double adiag[], double aleft[], double arite[], double f[],
     }
   }
   else{
-    #pragma omp parallel for
-    for ( i = 1; i < nu; i+=2 )
+    printf("odd");
+    for ( i = 1; i < nu+1; i+=2 )
     {
+      fprintf ( fp , "  %8d  %14f  %14f  %14f  %14f\n", i, aleft[i-1], adiag[i-1], arite[i-1], f[i-1] );
       fprintf ( fp , "  %8d  %14f  %14f  %14f  %14f\n", i + 1, aleft[i], adiag[i], arite[i], f[i] );
-      fprintf ( fp , "  %8d  %14f  %14f  %14f  %14f\n", i + 2, aleft[i+1], adiag[i+1], arite[i+1], f[i+1] );
     }
   }
 
