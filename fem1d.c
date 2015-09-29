@@ -462,7 +462,7 @@ void assemble ( double adiag[], double aleft[], double arite[], double f[],
    * CODE COMMENT
    * ==============================================================================================
    * Code version 2.0
-   *
+   * __________________________________
    *
    * Below is the biggest potential for parallelization in this program.
    * The first thing I did to increase performance in this application was to combine four for loops into
@@ -476,6 +476,7 @@ void assemble ( double adiag[], double aleft[], double arite[], double f[],
    * By its self it made some small improvements in the run time.
    *
    * Code version 2.1
+   * __________________________________
    *
    * As a result of the performance gains from 2.0, I thought it could be possible to improve performance
    * By wrapping the following loop in a parallel region. Reviewing the out.txt file produced by the program,
@@ -484,9 +485,22 @@ void assemble ( double adiag[], double aleft[], double arite[], double f[],
    * Based on the timed runs, we found that is version made a performance increase but a much smaller one compared
    * to version 2.0
    *
+   * Code version 2.2
+   * __________________________________
    *
+   * Going to try and parallelize the big nested for loop below. going to combine the parallel region of the first
+   * loop with the nested second. Have to define each variable initialized the nested loop, declared outside of parallel
+   * region, as private.
+   *
+   * The out.txt file confirms that the code is producing the correct output.
+   *
+   * The run-time of various NSUB input size determines that parallelizing the nesting for loop results in
+   * an even slower run time.
+   *
+   * Initially the parallel region was quite well nested inside, I believe the overhead being created multiple times caused
+   * the performance loss.
    */
-    #pragma omp parallel for
+  #pragma omp parallel for
     for (i = 0; i < nu; i++) {
       f[i] = 0.0;
       adiag[i] = 0.0;
@@ -505,6 +519,7 @@ void assemble ( double adiag[], double aleft[], double arite[], double f[],
 /*
   consider each quadrature point IQ,
 */
+
       for (iq = 0; iq < nquad; iq++) {
         xquade = xquad[ie];
 /*
@@ -534,6 +549,7 @@ void assemble ( double adiag[], double aleft[], double arite[], double f[],
   function times itself, or times the other basis function
   that is nonzero in this interval.
 */
+            #pragma omp parallel for private(jg,ju,aij)
             for (jl = 1; jl <= nl; jl++) {
               jg = node[jl - 1 + ie * 2];
               ju = indx[jg] - 1;
