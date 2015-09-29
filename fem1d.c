@@ -434,24 +434,19 @@ void assemble ( double adiag[], double aleft[], double arite[], double f[],
 */
 {
   double aij;
-  double he;
-  int i;
+
+
   int ie;
-  int ig;
+
   int il;
   int iq;
-  int iu;
-  int jg;
+
   int jl;
-  int ju;
-  double phii;
-  double phiix;
-  double phij;
-  double phijx;
-  double x;
-  double xleft;
-  double xquade;
-  double xrite;
+
+
+
+
+
 /*
   Zero out the arrays that hold the coefficients of the matrix
   and the right hand side.
@@ -499,8 +494,17 @@ void assemble ( double adiag[], double aleft[], double arite[], double f[],
    *
    * Initially the parallel region was quite well nested inside, I believe the overhead being created multiple times caused
    * the performance loss.
+   *
+   * Code version 2.3
+   * __________________________________
+   *
+   * For this version, I removed the parallel region around the combined for loop because parallelizing the for loop
+   * gave worse performance.
+   *
+   * Just for safety, I've declared all variables inside the parallel region so each thread will have its private variable.
    */
-  #pragma omp parallel for
+    //#pragma omp parallel for
+    int i;
     for (i = 0; i < nu; i++) {
       f[i] = 0.0;
       adiag[i] = 0.0;
@@ -511,33 +515,36 @@ void assemble ( double adiag[], double aleft[], double arite[], double f[],
 /*
   For interval number IE,
 */
-
+    #pragma omp parallel for private(iq,il,jl)
     for (ie = 0; ie < nsub; ie++) {
-      he = h[ie];
-      xleft = xn[node[0 + ie * 2]];
-      xrite = xn[node[1 + ie * 2]];
+      double he = h[ie];
+      double xleft = xn[node[0 + ie * 2]];
+      double xrite = xn[node[1 + ie * 2]];
 /*
   consider each quadrature point IQ,
 */
 
       for (iq = 0; iq < nquad; iq++) {
-        xquade = xquad[ie];
+        double xquade = xquad[ie];
 /*
   and evaluate the integrals associated with the basis functions
   for the left, and for the right nodes.
 */
         for (il = 1; il <= nl; il++) {
-          ig = node[il - 1 + ie * 2];
-          iu = indx[ig] - 1;
+          int ig = node[il - 1 + ie * 2];
+          int iu = indx[ig] - 1;
 
           if (0 <= iu) {
+            double phii;
+            double phiix;
             phi(il, xquade, &phii, &phiix, xleft, xrite);
             f[iu] = f[iu] + he * ff(xquade) * phii;
 /*
   Take care of boundary nodes at which U' was specified.
 */
+            double x;
             if (ig == 0) {
-              x = 0.0;
+               x = 0.0;
               f[iu] = f[iu] - pp(x) * ul;
             }
             else if (ig == nsub) {
@@ -549,11 +556,13 @@ void assemble ( double adiag[], double aleft[], double arite[], double f[],
   function times itself, or times the other basis function
   that is nonzero in this interval.
 */
-            #pragma omp parallel for private(jg,ju,aij)
+            //#pragma omp parallel for private(jg,ju,aij)
+            // Caused SERIOUS performance losses. Because the parallel region was being created nsub*nquad*nl times
             for (jl = 1; jl <= nl; jl++) {
-              jg = node[jl - 1 + ie * 2];
-              ju = indx[jg] - 1;
-
+              int jg = node[jl - 1 + ie * 2];
+              int ju = indx[jg] - 1;
+              double phij;
+              double phijx;
               phi(jl, xquade, &phij, &phijx, xleft, xrite);
 
               aij = he * (pp(xquade) * phiix * phijx
