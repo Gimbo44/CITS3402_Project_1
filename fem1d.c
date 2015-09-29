@@ -510,6 +510,8 @@ void assemble ( double adiag[], double aleft[], double arite[], double f[],
  * the performace of the new code compared to the vanilla code showed a loss in performance. This could be due to the small
  * NL value. The inner iterations depend on its value so potentially increasing it will provide a gain in the performance.
  *
+   * Results:
+   * Negative performance, it ran at 2x the origional code at NSUB = 10,000,000
  *
    * Code version 2.4
    * ______________________________
@@ -520,11 +522,23 @@ void assemble ( double adiag[], double aleft[], double arite[], double f[],
    * aij,he,ie,ig,il,iq,iu,jg,jl,ju,phii,phiix,phij,phijx,x,xleft,xquade,xrite, ie
    *
    * Results:
-   * Negative performance, it ran at 2x the origional code at NSUB = 10,000,000
-   * 
+   * Amazing! We got a 50% increase in the performance of the application. It now runs at 0.5x vanilla run-time.
+   * Going to try further the results
    *
+   *  Code version 2.5
+   * ______________________________
+   *
+   * Adding parallelization back to the combined for loop.
+   * Shared the parallel region between the two sets.
+   *
+   * Results:
+   *
+   * The performance gains from version 2.4 was only small. ie NSUB =10,000,000
+   * The difference was roughly 0.15 seconds faster.
   */
-
+#pragma omp parallel
+  {
+    #pragma omp for
     for (i = 0; i < nu; i++) {
       f[i] = 0.0;
       adiag[i] = 0.0;
@@ -535,7 +549,7 @@ void assemble ( double adiag[], double aleft[], double arite[], double f[],
 /*
   For interval number IE,
 */
-#pragma omp parallel for private(aij,he,ie,ig,il,iq,iu,jg,jl,ju,phii,phiix,phij,phijx,x,xleft,xquade,xrite)
+    #pragma omp  for private(aij,he,ie,ig,il,iq,iu,jg,jl,ju,phii,phiix,phij,phijx,x,xleft,xquade,xrite)
     for (ie = 0; ie < nsub; ie++) {
       he = h[ie];
       xleft = xn[node[0 + ie * 2]];
@@ -614,7 +628,7 @@ void assemble ( double adiag[], double aleft[], double arite[], double f[],
         }
       }
     }
-
+  }
   return;
 }
 /******************************************************************************/
