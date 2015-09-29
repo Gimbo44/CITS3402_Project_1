@@ -1276,7 +1276,8 @@ void prsys ( double adiag[], double aleft[], double arite[], double f[],
    * Decided to implement a static schedule in order to keep all threads busy
    * Capped the thread number to 4 as that is the number of physical cores present on the testing environment.
    * Result:
-   *
+   * Increased the run-time across the iteration of NSUB. there was one point of performance gain but I think that was
+   * down to luck.
    *
    */
 
