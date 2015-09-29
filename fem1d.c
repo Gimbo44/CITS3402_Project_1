@@ -458,22 +458,72 @@ void assemble ( double adiag[], double aleft[], double arite[], double f[],
 */
 
   /*
-   * ==============================================================================================
-   * CODE COMMENT
-   * ==============================================================================================
-   * Code version 2.0
+ * ==============================================================================================
+ * CODE COMMENT
+ * ==============================================================================================
+ * Code version 2.0
+ * __________________________________
+ *
+ * Below is the biggest potential for parallelization in this program.
+ * The first thing I did to increase performance in this application was to combine four for loops into
+ * a single loop that you see below containing the following lines of code:
+ *
+ *    f[i] = 0.0;
+ *    adiag[i] = 0.0;
+ *    aleft[i] = 0.0;
+ *    arite[i] = 0.0;
+ *
+ * By its self it made some small improvements in the run time.
+ *
+ * Code version 2.1
+ * __________________________________
+ *
+ * As a result of the performance gains from 2.0, I thought it could be possible to improve performance
+ * By wrapping the following loop in a parallel region. Reviewing the out.txt file produced by the program,
+ * program is producing similar outputs.
+ *
+ * Based on the timed runs, we found that is version made a performance increase but a much smaller one compared
+ * to version 2.0
+ *
+ * Code version 2.2
+ * __________________________________
+ *
+ * Going to try and parallelize the big nested for loop below. going to combine the parallel region of the first
+ * loop with the nested second. Have to define each variable initialized the nested loop, declared outside of parallel
+ * region, as private.
+ *
+ * The out.txt file confirms that the code is producing the correct output.
+ *
+ * The run-time of various NSUB input size determines that parallelizing the nesting for loop results in
+ * an even slower run time.
+ *
+ * Initially the parallel region was quite well nested inside, I believe the overhead being created multiple times caused
+ * the performance loss.
+ *
+ * Code version 2.3
+ * __________________________________
+ *
+ * For this version, I removed the parallel region around the combined for loop because parallelizing the for loop
+ * gave worse performance.
+ *
+ * Just for safety, I've declared all variables inside the parallel region so each thread will have its private variable.
+ * the performace of the new code compared to the vanilla code showed a loss in performance. This could be due to the small
+ * NL value. The inner iterations depend on its value so potentially increasing it will provide a gain in the performance.
+ *
+ *
+   * Code version 2.4
+   * ______________________________
    *
-   * Below is the biggest potential for parallelization in this program.
-   * The first thing I did to increase performance in this application was to combine four for loops into
-   * a single loop that you see below containing the following lines of code:
+   * Removed the parallelization of the combined for loop.
+   * Placed a simple parallelization for loop on the big set of nested for loops, keeping the following variables private
+   * per thread:
+   * aij,he,ie,ig,il,iq,iu,jg,jl,ju,phii,phiix,phij,phijx,x,xleft,xquade,xrite, ie
    *
-   *    f[i] = 0.0;
-   *    adiag[i] = 0.0;
-   *    aleft[i] = 0.0;
-   *    arite[i] = 0.0;
+   * Results:
+   * Negative performance, it ran at 2x the origional code at NSUB = 10,000,000
+   * 
    *
-   * By its self it made some small improvements in the run time.
-   */
+  */
 
     for (i = 0; i < nu; i++) {
       f[i] = 0.0;
@@ -485,7 +535,7 @@ void assemble ( double adiag[], double aleft[], double arite[], double f[],
 /*
   For interval number IE,
 */
-
+#pragma omp parallel for private(aij,he,ie,ig,il,iq,iu,jg,jl,ju,phii,phiix,phij,phijx,x,xleft,xquade,xrite)
     for (ie = 0; ie < nsub; ie++) {
       he = h[ie];
       xleft = xn[node[0 + ie * 2]];
