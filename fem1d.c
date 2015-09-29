@@ -1268,9 +1268,8 @@ void prsys ( double adiag[], double aleft[], double arite[], double f[],
    *
    *
    */
-  printf("%d\n",nu);
+
   if(nu % 2 == 0){
-    printf("even");
     for ( i = 0; i < nu; i+=2 )
     {
       fprintf ( fp , "  %8d  %14f  %14f  %14f  %14f\n", i + 1, aleft[i], adiag[i], arite[i], f[i] );
@@ -1278,11 +1277,14 @@ void prsys ( double adiag[], double aleft[], double arite[], double f[],
     }
   }
   else{
-    printf("odd");
-    for ( i = 1; i < nu+1; i+=2 )
+
+    for ( i = 1; i < nu; i+=2 )
     {
       fprintf ( fp , "  %8d  %14f  %14f  %14f  %14f\n", i, aleft[i-1], adiag[i-1], arite[i-1], f[i-1] );
       fprintf ( fp , "  %8d  %14f  %14f  %14f  %14f\n", i + 1, aleft[i], adiag[i], arite[i], f[i] );
+      if(i+2 >= nu){
+        fprintf ( fp , "  %8d  %14f  %14f  %14f  %14f\n", i + 2, aleft[i+1], adiag[i+1], arite[i+1], f[i+1] );
+      }
     }
   }
 
