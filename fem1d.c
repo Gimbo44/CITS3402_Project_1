@@ -6,6 +6,16 @@
 # include <sys/time.h>
 
 
+/*
+ * ================================================================================
+ * Project comment
+ * ================================================================================
+ * Last updated:  30/9/2015
+ * Version: 5.0
+ *
+ */
+
+
 
 int main ( int argc, char *argv[]  );
 void assemble ( double adiag[], double aleft[], double arite[], double f[], 
@@ -452,114 +462,187 @@ void assemble ( double adiag[], double aleft[], double arite[], double f[],
   double xleft;
   double xquade;
   double xrite;
+  /*
+* ==============================================================================================
+* CODE COMMENT
+* ==============================================================================================
+* Code version 2.0
+* __________________________________
+*
+* Below is the biggest potential for parallelization in this program.
+* The first thing I did to increase performance in this application was to combine four for loops into
+* a single loop that you see below containing the following lines of code:
+*
+*    f[i] = 0.0;
+*    adiag[i] = 0.0;
+*    aleft[i] = 0.0;
+*    arite[i] = 0.0;
+*
+* By its self it made some small improvements in the run time.
+*
+* Code version 2.1
+* __________________________________
+*
+* As a result of the performance gains from 2.0, I thought it could be possible to improve performance
+* By wrapping the following loop in a parallel region. Reviewing the out.txt file produced by the program,
+* program is producing similar outputs.
+*
+* Based on the timed runs, we found that is version made a performance increase but a much smaller one compared
+* to version 2.0
+*
+* Code version 2.2
+* __________________________________
+*
+* Going to try and parallelize the big nested for loop below. going to combine the parallel region of the first
+* loop with the nested second. Have to define each variable initialized the nested loop, declared outside of parallel
+* region, as private.
+*
+* The out.txt file confirms that the code is producing the correct output.
+*
+* The run-time of various NSUB input size determines that parallelizing the nesting for loop results in
+* an even slower run time.
+*
+* Initially the parallel region was quite well nested inside, I believe the overhead being created multiple times caused
+* the performance loss.
+*
+* Code version 2.3
+* __________________________________
+*
+* For this version, I removed the parallel region around the combined for loop because parallelizing the for loop
+* gave worse performance.
+*
+* Just for safety, I've declared all variables inside the parallel region so each thread will have its private variable.
+* the performace of the new code compared to the vanilla code showed a loss in performance. This could be due to the small
+* NL value. The inner iterations depend on its value so potentially increasing it will provide a gain in the performance.
+*
+  * Results:
+  * Negative performance, it ran at 2x the origional code at NSUB = 10,000,000
+*
+  * Code version 2.4
+  * ______________________________
+  *
+  * Removed the parallelization of the combined for loop.
+  * Placed a simple parallelization for loop on the big set of nested for loops, keeping the following variables private
+  * per thread:
+  * aij,he,ie,ig,il,iq,iu,jg,jl,ju,phii,phiix,phij,phijx,x,xleft,xquade,xrite, ie
+  *
+  * Results:
+  * Amazing! We got a 50% increase in the performance of the application. It now runs at 0.5x vanilla run-time.
+  * Going to try further the results
+  *
+  *  Code version 2.5
+  * ______________________________
+  *
+  * Adding parallelization back to the combined for loop.
+  * Shared the parallel region between the two sets.
+  *
+  * Results:
+  *
+  * The performance gains from version 2.4 was only small. ie NSUB =10,000,000
+  * The difference was roughly 0.15 seconds faster.
+ */
+/*
+ * Code version 5.0
+ * _______________________________
+ * This version of the code uses the work done in version 2.5. Except it uses the if clause provided
+ * by openmp. As noticed by the various graphs provided in our report, V2.5 doesn't have any performance gain
+ * when NSUB < 10,000. while on v2.4 a boost of performance isn't noticed until approximately NSUB = 1000
+ *
+ * Therefore for this version of the code, the parallel region will only be created in the case where nsub is greater
+ * or equal 1000
+ */
+
 /*
   Zero out the arrays that hold the coefficients of the matrix
   and the right hand side.
 */
-  for ( i = 0; i < nu; i++ )
+#pragma omp parallel if( nsub >= 1000 )
   {
-    f[i] = 0.0;
-  }
-  for ( i = 0; i < nu; i++ )
-  {
-    adiag[i] = 0.0;
-  }
-  for ( i = 0; i < nu; i++ )
-  {
-    aleft[i] = 0.0;
-  }
-  for ( i = 0; i < nu; i++ )
-  {
-    arite[i] = 0.0;
-  }
+
+#pragma omp for
+    for (i = 0; i < nu; i++) {
+      f[i] = 0.0;
+      adiag[i] = 0.0;
+      aleft[i] = 0.0;
+      arite[i] = 0.0;
+    }
+
 /*
   For interval number IE,
 */
-  for ( ie = 0; ie < nsub; ie++ )
-  {
-    he = h[ie];
-    xleft = xn[node[0+ie*2]];
-    xrite = xn[node[1+ie*2]];
+#pragma omp  for private(aij,he,ie,ig,il,iq,iu,jg,jl,ju,phii,phiix,phij,phijx,x,xleft,xquade,xrite)
+    for (ie = 0; ie < nsub; ie++) {
+      he = h[ie];
+      xleft = xn[node[0 + ie * 2]];
+      xrite = xn[node[1 + ie * 2]];
 /*
   consider each quadrature point IQ,
 */
-    for ( iq = 0; iq < nquad; iq++ )
-    {
-      xquade = xquad[ie];
+      for (iq = 0; iq < nquad; iq++) {
+        xquade = xquad[ie];
 /*
   and evaluate the integrals associated with the basis functions
   for the left, and for the right nodes.
 */
-      for ( il = 1; il <= nl; il++ )
-      {
-        ig = node[il-1+ie*2];
-        iu = indx[ig] - 1;
+        for (il = 1; il <= nl; il++) {
+          ig = node[il - 1 + ie * 2];
+          iu = indx[ig] - 1;
 
-        if ( 0 <= iu )
-        {
-          phi ( il, xquade, &phii, &phiix, xleft, xrite );
-          f[iu] = f[iu] + he * ff ( xquade ) * phii;
+          if (0 <= iu) {
+            phi(il, xquade, &phii, &phiix, xleft, xrite);
+            f[iu] = f[iu] + he * ff(xquade) * phii;
 /*
   Take care of boundary nodes at which U' was specified.
 */
-          if ( ig == 0 )
-          {
-            x = 0.0;
-            f[iu] = f[iu] - pp ( x ) * ul;
-          }
-          else if ( ig == nsub )
-          {
-            x = 1.0;
-            f[iu] = f[iu] + pp ( x ) * ur;
-          }
+            if (ig == 0) {
+              x = 0.0;
+              f[iu] = f[iu] - pp(x) * ul;
+            }
+            else if (ig == nsub) {
+              x = 1.0;
+              f[iu] = f[iu] + pp(x) * ur;
+            }
 /*
   Evaluate the integrals that take a product of the basis
   function times itself, or times the other basis function
   that is nonzero in this interval.
 */
-          for ( jl = 1; jl <= nl; jl++ )
-          {
-            jg = node[jl-1+ie*2];
-            ju = indx[jg] - 1;
+            for (jl = 1; jl <= nl; jl++) {
+              jg = node[jl - 1 + ie * 2];
+              ju = indx[jg] - 1;
 
-            phi ( jl, xquade, &phij, &phijx, xleft, xrite );
+              phi(jl, xquade, &phij, &phijx, xleft, xrite);
 
-            aij = he * ( pp ( xquade ) * phiix * phijx 
-                       + qq ( xquade ) * phii  * phij   );
+              aij = he * (pp(xquade) * phiix * phijx
+                          + qq(xquade) * phii * phij);
 /*
   If there is no variable associated with the node, then it's
   a specified boundary value, so we multiply the coefficient
   times the specified boundary value and subtract it from the
   right hand side.
 */
-            if ( ju < 0 )
-            {
-              if ( jg == 0 )
-              {
-                f[iu] = f[iu] - aij * ul;
+              if (ju < 0) {
+                if (jg == 0) {
+                  f[iu] = f[iu] - aij * ul;
+                }
+                else if (jg == nsub) {
+                  f[iu] = f[iu] - aij * ur;
+                }
               }
-              else if ( jg == nsub )
-              {               
-                f[iu] = f[iu] - aij * ur;
-              }
-            }
 /*
   Otherwise, we add the coefficient we've just computed to the
   diagonal, or left or right entries of row IU of the matrix.
 */
-            else
-            {
-              if ( iu == ju )
-              {
-                adiag[iu] = adiag[iu] + aij;
-              }
-              else if ( ju < iu )
-              {
-                aleft[iu] = aleft[iu] + aij;
-              }
-              else
-              {
-                arite[iu] = arite[iu] + aij;
+              else {
+                if (iu == ju) {
+                  adiag[iu] = adiag[iu] + aij;
+                }
+                else if (ju < iu) {
+                  aleft[iu] = aleft[iu] + aij;
+                }
+                else {
+                  arite[iu] = arite[iu] + aij;
+                }
               }
             }
           }
@@ -699,6 +782,39 @@ void geometry ( double h[], int ibc, int indx[], int nl, int node[], int nsub,
     differential equation is being solved.
 */
 {
+  /*
+ * =====================================================================================================================
+ * Project Comments
+ * =====================================================================================================================
+ *  Version 1.0:
+ *  ______________________________
+ *
+ *  Building off of version 0.2, Wrapped the whole function in a parallel region.
+ *  Had issues with earlier attempts where the output was being distorted and there were multiple print statements being
+ *  made.
+ *
+ *  This issue was resolved by using:
+ *      #pragma omp single
+ *      #pragma omp barrier (to make sure that the threads caught up to each other)
+ *
+ *  Results:
+ *  - Found that the data was looking a bit strange, this was due to the fact that I was parallelizing
+ *    for loops which make calculations based on previous iterations calculations. Because of this backwards calculation,
+ *    parallelization is not possible.
+ *
+ *  Version 5.0:
+ *  ______________________________
+ *  From the various results of version 1.*, it can be concluded that there is no performance gains by parallelizing this section
+ *  of the code. With the iteration values that we have choosen (10-> 10,000,000) we found that there was a exponential
+ *  increase in the run-time when using parallel regions.
+ *  Combining the code for geometry version 1.0 and assemble code from version 2.5 produces performance gains,
+ *  but only because of how well assemble runs. By combining the two we are getting less performance than if we just used the
+ *  assemble code + prsys code.
+ *
+ */
+
+
+
   int i;
 /*
   Set the value of XN, the locations of the nodes.
@@ -714,7 +830,9 @@ void geometry ( double h[], int ibc, int indx[], int nl, int node[], int nsub,
    */
   fprintf ( fp , "\n" );
 
-
+//#pragma omp parallel
+  //{
+//#pragma omp for
     for (i = 0; i <= nsub; i++) {
       xn[i] = ((double) (nsub - i) * xl + (double) i * xr) / (double) (nsub);
       fprintf(fp, "  %8d  %14f \n", i, xn[i]);
@@ -724,91 +842,104 @@ void geometry ( double h[], int ibc, int indx[], int nl, int node[], int nsub,
 /*
   Set the lengths of each subinterval.
 */
-    fprintf(fp, "\n");
-    fprintf(fp, "Subint    Length\n");
-    fprintf(fp, "\n");
 
-    for (i = 0; i < nsub; i++) {
-      h[i] = xn[i + 1] - xn[i];
-      fprintf(fp, "  %8d  %14f\n", i + 1, h[i]);
+    //#pragma omp single
+    {
+      fprintf(fp, "\n");
+      fprintf(fp, "Subint    Length\n");
+      fprintf(fp, "\n");
     }
+//#pragma omp for
+      for (i = 0; i < nsub; i++) {
+        h[i] = xn[i + 1] - xn[i];
+        fprintf(fp, "  %8d  %14f\n", i + 1, h[i]);
+      }
 
 /*
   Set the quadrature points, each of which is the midpoint
   of its subinterval.
 */
-    fprintf(fp, "\n");
-    fprintf(fp, "Subint    Quadrature point\n");
-    fprintf(fp, "\n");
-
-    for (i = 0; i < nsub; i++) {
-      xquad[i] = 0.5 * (xn[i] + xn[i + 1]);
-      fprintf(fp, "  %8d  %14f\n", i + 1, xquad[i]);
+//#pragma omp single
+    {
+      fprintf(fp, "\n");
+      fprintf(fp, "Subint    Quadrature point\n");
+      fprintf(fp, "\n");
     }
+//#pragma omp for
+      for (i = 0; i < nsub; i++) {
+        xquad[i] = 0.5 * (xn[i] + xn[i + 1]);
+        fprintf(fp, "  %8d  %14f\n", i + 1, xquad[i]);
+      }
 
 /*
   Set the value of NODE, which records, for each interval,
   the node numbers at the left and right.
 */
-
-    fprintf(fp, "\n");
-    fprintf(fp, "Subint  Left Node  Right Node\n");
-    fprintf(fp, "\n");
-
-    for (i = 0; i < nsub; i++) {
-      node[0 + i * 2] = i;
-      node[1 + i * 2] = i + 1;
-      fprintf(fp, "  %8d  %8d  %8d\n", i + 1, node[0 + i * 2], node[1 + i * 2]);
+//#pragma omp single
+    {
+      fprintf(fp, "\n");
+      fprintf(fp, "Subint  Left Node  Right Node\n");
+      fprintf(fp, "\n");
     }
+//#pragma omp for
+      for (i = 0; i < nsub; i++) {
+        node[0 + i * 2] = i;
+        node[1 + i * 2] = i + 1;
+        fprintf(fp, "  %8d  %8d  %8d\n", i + 1, node[0 + i * 2], node[1 + i * 2]);
+      }
 
 /*
   Starting with node 0, see if an unknown is associated with
   the node.  If so, give it an index.
 */
-
-    *nu = 0;
+//#pragma omp single
+    {
+      *nu = 0;
 /*
   Handle first node.
 */
-    i = 0;
-    if (ibc == 1 || ibc == 3) {
-      indx[i] = -1;
-    }
-    else {
-      *nu = *nu + 1;
-      indx[i] = *nu;
-    }
+      i = 0;
+      if (ibc == 1 || ibc == 3) {
+        indx[i] = -1;
+      }
+      else {
+        *nu = *nu + 1;
+        indx[i] = *nu;
+      }
 
 /*
   Handle nodes 1 through nsub-1
 */
-
-    for (i = 1; i < nsub; i++) {
-      *nu = *nu + 1;
-      indx[i] = *nu;
     }
+//#pragma omp for
+      for (i = 1; i < nsub; i++) {
+        *nu = *nu + 1;
+        indx[i] = *nu;
+      }
+
+  //}
 /*
   Handle the last node.
 /*/
-    i = nsub;
+      i = nsub;
 
-    if (ibc == 2 || ibc == 3) {
-      indx[i] = -1;
-    }
-    else {
-      *nu = *nu + 1;
-      indx[i] = *nu;
-    }
+      if (ibc == 2 || ibc == 3) {
+        indx[i] = -1;
+      }
+      else {
+        *nu = *nu + 1;
+        indx[i] = *nu;
+      }
 
-    fprintf(fp, "\n");
-    fprintf(fp, "  Number of unknowns NU = %8d\n", *nu);
-    fprintf(fp, "\n");
-    fprintf(fp, "  Node  Unknown\n");
-    fprintf(fp, "\n");
+      fprintf(fp, "\n");
+      fprintf(fp, "  Number of unknowns NU = %8d\n", *nu);
+      fprintf(fp, "\n");
+      fprintf(fp, "  Node  Unknown\n");
+      fprintf(fp, "\n");
 
-    for (i = 0; i <= nsub; i++) {
-      fprintf(fp, "  %8d  %8d\n", i, indx[i]);
-    }
+      for (i = 0; i <= nsub; i++) {
+        fprintf(fp, "  %8d  %8d\n", i, indx[i]);
+      }
 
 
   fclose(fp);
@@ -1251,10 +1382,63 @@ void prsys ( double adiag[], double aleft[], double arite[], double f[],
   fprintf ( fp , "Equation  ALEFT  ADIAG  ARITE  RHS\n" );
   fprintf ( fp , "\n" );
 
-  for ( i = 0; i < nu; i++ )
-  {
-    fprintf ( fp , "  %8d  %14f  %14f  %14f  %14f\n",
-      i + 1, aleft[i], adiag[i], arite[i], f[i] );
+  /*
+   * ===============================================================================================================
+   * Project Comments
+   * ===============================================================================================================
+   * Version 3.0:
+   * ____________________________
+   * This function is a very basic function as it only contains a single for loop.
+   * The room for optimisation is quite small as the work isn't very complex.
+   * This first version I looked at how I could reduce the number of iterations and focus on
+   * improving the linear performance.
+   *
+   * I broke the code up into two sections, even and odd values of nu. I hoped to half the iteration size of the for loop
+   * to give some performance improvements.
+   *
+   * Result:
+   * There was some consistent improvement in the run-time which was expected as the number of iterations was cut down.
+   *
+   * Version 3.1:
+   * ___________________________
+   * This version I wanted to try and expand on the performance gains by parallelizing the code.
+   * I'm concerned that due to the reduced iteration size, benefits of parallelizing the code will only be seen at
+   * very high values of nu (which are equivalent to NSUB)
+   *
+   * Decided to implement a static schedule in order to keep all threads busy
+   * Capped the thread number to 4 as that is the number of physical cores present on the testing environment.
+   * Result:
+   * Increased the run-time across the iteration of NSUB. there was one point of performance gain but I think that was
+   * down to luck.
+   *
+   *
+   * Version 5.0:
+   * ____________________________
+   * For the final version of the code, we decided to utilize the small performance gains of version 3.0.
+   * Due to the simplicity of the operation of each loop, an extremely high value for NSUB would be needed to justify
+   * parallelizing the code.
+   *
+   * Another issue which was faced was the inconsistency of fprintf. in the case where fprintf is used then splitting
+   * the loop as follows is necessary to increase performance.
+   */
+
+  if(nu % 2 == 0){
+    for ( i = 0; i < nu; i+=2 )
+    {
+      fprintf ( fp , "  %8d  %14f  %14f  %14f  %14f\n", i + 1, aleft[i], adiag[i], arite[i], f[i] );
+      fprintf ( fp , "  %8d  %14f  %14f  %14f  %14f\n", i + 2, aleft[i+1], adiag[i+1], arite[i+1], f[i+1] );
+    }
+  }
+  else{
+
+    for ( i = 1; i < nu; i+=2 )
+    {
+      fprintf ( fp , "  %8d  %14f  %14f  %14f  %14f\n", i, aleft[i-1], adiag[i-1], arite[i-1], f[i-1] );
+      fprintf ( fp , "  %8d  %14f  %14f  %14f  %14f\n", i + 1, aleft[i], adiag[i], arite[i], f[i] );
+      if(i+2 >= nu){
+        fprintf ( fp , "  %8d  %14f  %14f  %14f  %14f\n", i + 2, aleft[i+1], adiag[i+1], arite[i+1], f[i+1] );
+      }
+    }
   }
   fclose(fp);
   return;
@@ -1343,34 +1527,79 @@ void solve ( double adiag[], double aleft[], double arite[], double f[],
     Input, int NU, the number of equations to be solved.
 */
 {
+/*
+ * ==================================================================================================================
+ * Project comment
+ * ==================================================================================================================
+ *
+ * TLDR:  No way of parallelizing this code without corrupting the output.
+ *
+ *
+ * The below section was a bit of a failed attempted to parallelize this section of code.
+ * The initial assumption was that each of the for loops could be ran in such a manner that
+ * would allow x threads to share the work load. This was painfully not the case.
+ *
+ * The code in all three loops makes references to other data which may/may not have been initialized
+ * Eg in the first loop:
+ *
+ *    adiag[i] = adiag[i] - aleft[i] * arite[i - 1];
+ *    arite[i] = arite[i] / adiag[i];
+ *
+ * We will assume NSUB = 10 therefore we have
+ *
+ *    1 2 3 4 5 6 7 8 9 10
+ *
+ * If each thread gets an even proportion (we will say for now there are two threads)
+ * thread 1:  1,2,3,4,5
+ * thread 2:  6,7,8,9,10
+ *
+ * therefore, when thread 2 starts it will make reference to index 5 of arite which hasn't had the
+ * following code applied to it yet:
+ *
+ *     arite[i] = arite[i] / adiag[i];
+ *
+ * Therefore, due to limitation on all three of these loop contents it isn't possible to
+ * use multi-threading.
+ */
+
   int i;
 /*
   Carry out Gauss elimination on the matrix, saving information
   needed for the backsolve.
 */
   arite[0] = arite[0] / adiag[0];
-
-  for ( i = 1; i < nu - 1; i++ )
-  {
-    adiag[i] = adiag[i] - aleft[i] * arite[i-1];
+//#pragma omp parallel
+  //{
+//#pragma omp for schedule(static)
+  for (i = 1; i < nu - 1; i++) {
+    adiag[i] = adiag[i] - aleft[i] * arite[i - 1];  // This is the problem line, the arite[i-1] in particular
     arite[i] = arite[i] / adiag[i];
   }
-  adiag[nu-1] = adiag[nu-1] - aleft[nu-1] * arite[nu-2];
+//#pragma omp single
+  //{
+  adiag[nu - 1] = adiag[nu - 1] - aleft[nu - 1] * arite[nu - 2];
 /*
   Carry out the same elimination steps on F that were done to the
   matrix.
 */
   f[0] = f[0] / adiag[0];
+//}
+//#pragma omp barrier
+//#pragma omp for schedule(static)
   for ( i = 1; i < nu; i++ )
   {
-    f[i] = ( f[i] - aleft[i] * f[i-1] ) / adiag[i];
+    f[i] = ( f[i] - aleft[i] * f[i-1] ) / adiag[i]; // again, the issue in this line is the reference to the previous
+                                                    // element
   }
 /*
   And now carry out the steps of "back substitution".
 */
+//#pragma omp barrier
+//#pragma omp for schedule(static)
   for ( i = nu - 2; 0 <= i; i-- )
   {
-    f[i] = f[i] - arite[i] * f[i+1];
+    f[i] = f[i] - arite[i] * f[i+1];  // again, the issue in this line is the reference to the next
+                                      // element
   }
 
   return;
