@@ -484,7 +484,7 @@ void assemble ( double adiag[], double aleft[], double arite[], double f[],
 * __________________________________
 *
 * As a result of the performance gains from 2.0, I thought it could be possible to improve performance
-* By wrapping the following loop in a parallel region. Reviewing the out.txt file produced by the program,
+* By wrapping the following loop in a parallel region. Reviewing the out.txt //FILE produced by the program,
 * program is producing similar outputs.
 *
 * Based on the timed runs, we found that is version made a performance increase but a much smaller one compared
@@ -497,7 +497,7 @@ void assemble ( double adiag[], double aleft[], double arite[], double f[],
 * loop with the nested second. Have to define each variable initialized the nested loop, declared outside of parallel
 * region, as private.
 *
-* The out.txt file confirms that the code is producing the correct output.
+* The out.txt //FILE confirms that the code is producing the correct output.
 *
 * The run-time of various NSUB input size determines that parallelizing the nesting for loop results in
 * an even slower run time.
@@ -814,6 +814,12 @@ void geometry ( double h[], int ibc, int indx[], int nl, int node[], int nsub,
  *  but only because of how well assemble runs. By combining the two we are getting less performance than if we just used the
  *  assemble code + prsys code.
  *
+ *  Version 5.1:
+ *  _________________________________
+ *  This code is being produced under the assumption the fprintf times are to be removed.
+ *  Based on the results of version 1.0, and under the assumption fprintf statements are ignored, There will be performance
+ *  gains when NSUB >= 100,000. therefore a trigger if statement has been added to control when parallel regions should be
+ *  activated.
  */
 
 
@@ -833,9 +839,9 @@ void geometry ( double h[], int ibc, int indx[], int nl, int node[], int nsub,
    */
   fprintf ( fp , "\n" );
 
-//#pragma omp parallel
-  //{
-//#pragma omp for
+#pragma omp parallel if( nsub >= 100000 )
+  {
+#pragma omp for
     for (i = 0; i <= nsub; i++) {
       xn[i] = ((double) (nsub - i) * xl + (double) i * xr) / (double) (nsub);
       fprintf(fp, "  %8d  %14f \n", i, xn[i]);
@@ -846,56 +852,56 @@ void geometry ( double h[], int ibc, int indx[], int nl, int node[], int nsub,
   Set the lengths of each subinterval.
 */
 
-    //#pragma omp single
+#pragma omp single
     {
       fprintf(fp, "\n");
       fprintf(fp, "Subint    Length\n");
       fprintf(fp, "\n");
     }
-//#pragma omp for
-      for (i = 0; i < nsub; i++) {
-        h[i] = xn[i + 1] - xn[i];
-        fprintf(fp, "  %8d  %14f\n", i + 1, h[i]);
-      }
+#pragma omp for
+    for (i = 0; i < nsub; i++) {
+      h[i] = xn[i + 1] - xn[i];
+      fprintf(fp, "  %8d  %14f\n", i + 1, h[i]);
+    }
 
 /*
   Set the quadrature points, each of which is the midpoint
   of its subinterval.
 */
-//#pragma omp single
+#pragma omp single
     {
       fprintf(fp, "\n");
       fprintf(fp, "Subint    Quadrature point\n");
       fprintf(fp, "\n");
     }
-//#pragma omp for
-      for (i = 0; i < nsub; i++) {
-        xquad[i] = 0.5 * (xn[i] + xn[i + 1]);
-        fprintf(fp, "  %8d  %14f\n", i + 1, xquad[i]);
-      }
+#pragma omp for
+    for (i = 0; i < nsub; i++) {
+      xquad[i] = 0.5 * (xn[i] + xn[i + 1]);
+      fprintf(fp, "  %8d  %14f\n", i + 1, xquad[i]);
+    }
 
 /*
   Set the value of NODE, which records, for each interval,
   the node numbers at the left and right.
 */
-//#pragma omp single
+#pragma omp single
     {
       fprintf(fp, "\n");
       fprintf(fp, "Subint  Left Node  Right Node\n");
       fprintf(fp, "\n");
     }
-//#pragma omp for
-      for (i = 0; i < nsub; i++) {
-        node[0 + i * 2] = i;
-        node[1 + i * 2] = i + 1;
-        fprintf(fp, "  %8d  %8d  %8d\n", i + 1, node[0 + i * 2], node[1 + i * 2]);
-      }
+#pragma omp for
+    for (i = 0; i < nsub; i++) {
+      node[0 + i * 2] = i;
+      node[1 + i * 2] = i + 1;
+      fprintf(fp, "  %8d  %8d  %8d\n", i + 1, node[0 + i * 2], node[1 + i * 2]);
+    }
 
 /*
   Starting with node 0, see if an unknown is associated with
   the node.  If so, give it an index.
 */
-//#pragma omp single
+#pragma omp single
     {
       *nu = 0;
 /*
@@ -914,16 +920,18 @@ void geometry ( double h[], int ibc, int indx[], int nl, int node[], int nsub,
   Handle nodes 1 through nsub-1
 */
     }
-//#pragma omp for
-      for (i = 1; i < nsub; i++) {
-        *nu = *nu + 1;
-        indx[i] = *nu;
-      }
+#pragma omp for
+    for (i = 1; i < nsub; i++) {
+      *nu = *nu + 1;
+      indx[i] = *nu;
+    }
 
-  //}
+
 /*
   Handle the last node.
 /*/
+#pragma omp single
+    {
       i = nsub;
 
       if (ibc == 2 || ibc == 3) {
@@ -939,12 +947,13 @@ void geometry ( double h[], int ibc, int indx[], int nl, int node[], int nsub,
       fprintf(fp, "\n");
       fprintf(fp, "  Node  Unknown\n");
       fprintf(fp, "\n");
+    }
+  #pragma omp for
+    for (i = 0; i <= nsub; i++) {
+      fprintf(fp, "  %8d  %8d\n", i, indx[i]);
+    }
 
-      for (i = 0; i <= nsub; i++) {
-        fprintf(fp, "  %8d  %8d\n", i, indx[i]);
-      }
-
-
+  }
   fclose(fp);
   return;
 }
@@ -1176,6 +1185,7 @@ void output ( double f[], int ibc, int indx[], int nsub, int nu, double ul,
   fprintf ( fp , "  Node    X(I)        U(X(I))\n" );
   fprintf ( fp , "\n" );
 
+#pragma omp parallel for private(u)
   for ( i = 0; i <= nsub; i++ )
   {
 /*
@@ -1437,9 +1447,16 @@ void prsys ( double adiag[], double aleft[], double arite[], double f[],
    * Due to the simplicity of the operation of each loop, an extremely high value for NSUB would be needed to justify
    * parallelizing the code.
    *
+   * Version 5.1
+   * ____________________________
+   * Based on the results of version 3.1 and 3.0 without fprintf statements, it has come clear that the trigger time
+   * or the time when parallelizing the code produces beneficial results, is when NSUB = 100,000.
+   * So This version combines 3.1 with if conditions to control when the parallel regions are activated.
+   *
    */
 
   if(nu % 2 == 0){
+    #pragma omp parallel for schedule(static,1) if ( nu >= 1000000)
     for ( i = 0; i < nu; i+=2 )
     {
       fprintf ( fp , "  %8d  %14f  %14f  %14f  %14f\n", i + 1, aleft[i], adiag[i], arite[i], f[i] );
@@ -1447,7 +1464,7 @@ void prsys ( double adiag[], double aleft[], double arite[], double f[],
     }
   }
   else{
-
+    #pragma omp parallel for schedule(static,1) if ( nu >= 1000000)
     for ( i = 1; i < nu; i+=2 )
     {
       fprintf ( fp , "  %8d  %14f  %14f  %14f  %14f\n", i, aleft[i-1], adiag[i-1], arite[i-1], f[i-1] );
