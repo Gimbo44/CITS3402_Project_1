@@ -801,6 +801,9 @@ void geometry ( double h[], int ibc, int indx[], int nl, int node[], int nsub,
  *  - Found that the data was looking a bit strange, this was due to the fact that I was parallelizing
  *    for loops which make calculations based on previous iterations calculations. Because of this backwards calculation,
  *    parallelization is not possible.
+ *  - without fprintf statements:
+ *    without the inconsistent fprintf statements, a performance gain was achieved when NSUB was greater than 100,000.
+*     The performance improvement increased exponentially.
  *
  *  Version 5.0:
  *  ______________________________
@@ -1006,6 +1009,15 @@ void init ( int *ibc, int *nquad, double *ul, double *ur, double *xl,
     differential equation is being solved.
 */
 {
+/*
+ * ===================================================================================================================
+ * PROJECT COMMENT
+ * ===================================================================================================================
+ *
+ * Init would gain no performance boost from the aid of multi-thread programming.
+ * Therefore it is a safe to say this function can be ignored in regards to performance improvements.
+ *
+ */
 /*
   IBC declares what the boundary conditions are.
 */
@@ -1399,6 +1411,10 @@ void prsys ( double adiag[], double aleft[], double arite[], double f[],
    * Result:
    * There was some consistent improvement in the run-time which was expected as the number of iterations was cut down.
    *
+   * - without fprintf:
+   *    Without fprintf calls, there was an exponential increase in the performance gained.
+   *
+   *
    * Version 3.1:
    * ___________________________
    * This version I wanted to try and expand on the performance gains by parallelizing the code.
@@ -1411,6 +1427,9 @@ void prsys ( double adiag[], double aleft[], double arite[], double f[],
    * Increased the run-time across the iteration of NSUB. there was one point of performance gain but I think that was
    * down to luck.
    *
+   *  - without fprintf:
+   *      without fprintf, it gained performance (0.1 less than version 1.0) and only started to obtain performance gains
+   *      when NSUB was greater than 100,000 while version 3.0 started to gain performance from 10,000 onwards.
    *
    * Version 5.0:
    * ____________________________
@@ -1418,8 +1437,6 @@ void prsys ( double adiag[], double aleft[], double arite[], double f[],
    * Due to the simplicity of the operation of each loop, an extremely high value for NSUB would be needed to justify
    * parallelizing the code.
    *
-   * Another issue which was faced was the inconsistency of fprintf. in the case where fprintf is used then splitting
-   * the loop as follows is necessary to increase performance.
    */
 
   if(nu % 2 == 0){
